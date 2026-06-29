@@ -1,0 +1,31 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    # Default to a local sqlite file so the app runs with zero setup.
+    # In Docker / production this is overridden by DATABASE_URL (Postgres).
+    database_url: str = "sqlite:///./taskboard.db"
+
+    jwt_secret: str = "change-me-in-production"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60 * 24  # 24h
+
+    # CORS: the frontend dev server origin.
+    cors_origins: str = "http://localhost:5173"
+
+    # Used by the background reminder job.
+    reminder_check_interval_seconds: int = 60
+
+    redis_url: str = "redis://localhost:6379/0"
+
+    # Where uploaded card attachments are stored (inside the container).
+    upload_dir: str = "./uploads"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+
+settings = Settings()
