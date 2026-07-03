@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { api, setToken } from "../lib/api.js";
+import { api, setToken, setEmail, getEmail } from "../lib/api.js";
 
 const SPINES = [
   "var(--spine-1)",
@@ -13,11 +13,14 @@ const SPINES = [
 export default function Boards() {
   const [boards, setBoards] = useState([]);
   const [name, setName] = useState("");
+  const [loaded, setLoaded] = useState(false);
   const navigate = useNavigate();
+  const email = getEmail();
 
   async function load() {
     try {
       setBoards(await api.listBoards());
+      setLoaded(true);
     } catch {
       setToken(null);
       navigate("/login");
@@ -36,6 +39,7 @@ export default function Boards() {
 
   function logout() {
     setToken(null);
+    setEmail(null);
     navigate("/login");
   }
 
@@ -45,9 +49,17 @@ export default function Boards() {
         <Link to="/" className="wordmark">
           <span className="dot" /> Stack Board
         </Link>
-        <button className="btn btn-ghost btn-sm" onClick={logout}>
-          Log out
-        </button>
+        <div className="topbar-right">
+          {email && (
+            <span className="user-chip">
+              <span className="av">{email[0]}</span>
+              {email}
+            </span>
+          )}
+          <button className="btn btn-ghost btn-sm" onClick={logout}>
+            Log out
+          </button>
+        </div>
       </header>
 
       <div className="page">
@@ -59,6 +71,13 @@ export default function Boards() {
             </p>
           </div>
         </div>
+
+        {loaded && boards.length === 0 && (
+          <div className="empty">
+            <h3>No boards yet</h3>
+            <p>Create your first board below to start organizing work.</p>
+          </div>
+        )}
 
         <div className="board-grid">
           {boards.map((b, i) => (

@@ -8,7 +8,7 @@ from . import models
 from .config import settings
 from .database import Base, engine, get_db
 from .deps import get_current_user
-from .routers import auth, boards, cards, lists, stats
+from .routers import auth, boards, cards, lists, stats, agent
 from .security import decode_token
 from .tasks import reminder_loop
 from .websockets import manager, set_loop
@@ -28,6 +28,7 @@ app.include_router(boards.router)
 app.include_router(lists.router)
 app.include_router(cards.router)
 app.include_router(stats.router)
+app.include_router(agent.router)
 
 
 @app.on_event("startup")
@@ -65,16 +66,20 @@ async def board_ws(websocket: WebSocket, board_id: int, token: str = ""):
             .filter_by(board_id=board_id, user_id=user_id)
             .first()
         )
+        user = db.query(models.User).get(user_id)
+        email = user.email if user else "unknown"
     finally:
         db.close()
     if member is None:
         await websocket.close(code=4403)
         return
 
-    await manager.connect(board_id, websocket)
+    await manager.connect(board_id, websocket, email)
+    await manager.broadcast_presence(board_id)
     try:
         while True:
             # We don't require client messages; keep the socket open.
             await websocket.receive_text()
     except WebSocketDisconnect:
         await manager.disconnect(board_id, websocket)
+        await manager.broadcast_presence(board_id)

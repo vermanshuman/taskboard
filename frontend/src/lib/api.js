@@ -10,6 +10,13 @@ export function setToken(t) {
   if (t) localStorage.setItem("token", t);
   else localStorage.removeItem("token");
 }
+export function getEmail() {
+  return localStorage.getItem("email") || "";
+}
+export function setEmail(e) {
+  if (e) localStorage.setItem("email", e);
+  else localStorage.removeItem("email");
+}
 
 async function request(path, { method = "GET", body, form } = {}) {
   const headers = {};
@@ -36,9 +43,9 @@ async function request(path, { method = "GET", body, form } = {}) {
 export const api = {
   // auth
   register: (email, password) =>
-    request("/api/auth/register", { method: "POST", body: { email, password } }),
+      request("/api/auth/register", { method: "POST", body: { email, password } }),
   login: (email, password) =>
-    request("/api/auth/login", { method: "POST", form: { username: email, password } }),
+      request("/api/auth/login", { method: "POST", form: { username: email, password } }),
   me: () => request("/api/me"),
 
   // boards
@@ -49,27 +56,31 @@ export const api = {
 
   // lists
   createList: (boardId, name) =>
-    request(`/api/boards/${boardId}/lists`, { method: "POST", body: { name } }),
+      request(`/api/boards/${boardId}/lists`, { method: "POST", body: { name } }),
   updateList: (boardId, listId, data) =>
-    request(`/api/boards/${boardId}/lists/${listId}`, { method: "PATCH", body: data }),
+      request(`/api/boards/${boardId}/lists/${listId}`, { method: "PATCH", body: data }),
   deleteList: (boardId, listId) =>
-    request(`/api/boards/${boardId}/lists/${listId}`, { method: "DELETE" }),
+      request(`/api/boards/${boardId}/lists/${listId}`, { method: "DELETE" }),
 
   // cards
   createCard: (boardId, listId, data) =>
-    request(`/api/boards/${boardId}/cards?list_id=${listId}`, { method: "POST", body: data }),
+      request(`/api/boards/${boardId}/cards?list_id=${listId}`, { method: "POST", body: data }),
   updateCard: (boardId, cardId, data) =>
-    request(`/api/boards/${boardId}/cards/${cardId}`, { method: "PATCH", body: data }),
+      request(`/api/boards/${boardId}/cards/${cardId}`, { method: "PATCH", body: data }),
   moveCard: (boardId, cardId, listId, position) =>
-    request(`/api/boards/${boardId}/cards/${cardId}/move`, {
-      method: "POST",
-      body: { list_id: listId, position },
-    }),
+      request(`/api/boards/${boardId}/cards/${cardId}/move`, {
+        method: "POST",
+        body: { list_id: listId, position },
+      }),
   deleteCard: (boardId, cardId) =>
-    request(`/api/boards/${boardId}/cards/${cardId}`, { method: "DELETE" }),
+      request(`/api/boards/${boardId}/cards/${cardId}`, { method: "DELETE" }),
 
   // stats
   getStats: (boardId) => request(`/api/boards/${boardId}/stats`),
+
+  // agent
+  askAgent: (boardId, prompt) =>
+      request(`/api/boards/${boardId}/agent/create-card`, { method: "POST", body: { prompt } }),
 };
 
 // Open a live WebSocket for a board. onMessage receives parsed event objects.

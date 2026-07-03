@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, setToken } from "../lib/api.js";
+import { api, setToken, setEmail } from "../lib/api.js";
 
 export default function Login() {
   const [email, setEmail] = useState("demo@taskboard.dev");
@@ -16,6 +16,7 @@ export default function Login() {
         ? await api.register(email, password)
         : await api.login(email, password);
       setToken(res.access_token);
+      setEmail(res.user?.email || email);
       navigate("/");
     } catch (e) {
       setError(parseError(e));
