@@ -88,3 +88,7 @@ class BoardOut(BaseModel):
 
 class BoardDetail(BoardOut):
     lists: list[ListOut] = []
+
+# ---- agent ----
+class AgentPromptRequest(BaseModel):
+    prompt: str

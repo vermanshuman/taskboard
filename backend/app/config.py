@@ -23,9 +23,12 @@ class Settings(BaseSettings):
     # Where uploaded card attachments are stored (inside the container).
     upload_dir: str = "./uploads"
 
+    # OpenAI API configuration for the AI Agent features
+    openai_api_key: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
-        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        return [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 
 
 settings = Settings()

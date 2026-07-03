@@ -14,6 +14,9 @@ A real-time, Trello-style task board. Full-stack portfolio project.
 - Card move/reorder endpoint (drag-and-drop target)
 - File attachment upload per card
 - WebSocket live sync — every change broadcasts to other open sessions
+- Live presence — see who else is viewing a board in real time (avatars + count)
+- Reminder toasts — the background due-date job surfaces as a toast in the UI
+- Due-date color coding — overdue (red) and due-soon (amber) cards
 - Background due-date reminder job (in-process; Redis/Celery-ready)
 - Stats endpoint: cards per list + completed-per-week
 - Seed script: demo user + sample board so the demo is never empty
