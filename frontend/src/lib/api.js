@@ -17,6 +17,13 @@ export function setEmail(e) {
   if (e) localStorage.setItem("email", e);
   else localStorage.removeItem("email");
 }
+export function getName() {
+  return localStorage.getItem("full_name") || "";
+}
+export function setName(n) {
+  if (n) localStorage.setItem("full_name", n);
+  else localStorage.removeItem("full_name");
+}
 
 async function request(path, { method = "GET", body, form } = {}) {
   const headers = {};
@@ -42,11 +49,17 @@ async function request(path, { method = "GET", body, form } = {}) {
 
 export const api = {
   // auth
-  register: (email, password) =>
-      request("/api/auth/register", { method: "POST", body: { email, password } }),
+  register: (email, password, fullName) =>
+      request("/api/auth/register", { method: "POST", body: { email, password, full_name: fullName } }),
   login: (email, password) =>
       request("/api/auth/login", { method: "POST", form: { username: email, password } }),
+  oauthShortcut: (email, fullName, provider) =>
+      request("/api/auth/oauth-shortcut", { method: "POST", body: { email, full_name: fullName, provider } }),
   me: () => request("/api/me"),
+
+  // profile updates
+  updateProfile: (avatarColor, fullName) =>
+      request("/api/auth/profile", { method: "PUT", body: { avatar_color: avatarColor, full_name: fullName } }),
 
   // boards
   listBoards: () => request("/api/boards"),
