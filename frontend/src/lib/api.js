@@ -1,7 +1,7 @@
 // Thin API client for the Task Board backend.
 // Token is kept in memory + localStorage. The FE dev builds UI on top of this.
 
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+export const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export function getToken() {
   return localStorage.getItem("token");
@@ -31,9 +31,19 @@ async function request(path, { method = "GET", body, form } = {}) {
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   let payload;
+
   if (form) {
-    payload = new URLSearchParams(form).toString();
-    headers["Content-Type"] = "application/x-www-form-urlencoded";
+    // This forces the browser to build a true multipart/form-data payload
+    // identical to Postman's '--form' data structure.
+    const formData = new FormData();
+    Object.keys(form).forEach((key) => {
+      formData.append(key, form[key]);
+    });
+    payload = formData;
+
+    // IMPORTANT: Do NOT set a "Content-Type" header string here.
+    // Leaving it empty tells the browser to automatically compute the
+    // correct multipart boundaries that Render's proxy demands.
   } else if (body !== undefined) {
     payload = JSON.stringify(body);
     headers["Content-Type"] = "application/json";

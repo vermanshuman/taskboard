@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom"; // Add useSearchParams
-import { api, setToken, setEmail } from "../lib/api.js";
+import { api, setToken, setEmail, BASE } from "../lib/api.js";
 
 export default function Login() {
   const [email, setFormEmail] = useState("demo@taskboard.dev");
@@ -28,7 +28,7 @@ export default function Login() {
 
   const handleRealGoogleLogin = () => {
     // Navigate out of the SPA directly to the FastAPI route that triggers the Google OAuth Screen
-    window.location.href = "http://localhost:8000/api/auth/google/login";
+    window.location.href = `${BASE}/api/auth/google/login`;
   };
 
   async function submit() {
