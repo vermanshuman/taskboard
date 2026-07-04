@@ -65,7 +65,10 @@ export default function Login() {
             <h1 className="auth-headline">Move work forward, together and in real time.</h1>
             <p className="auth-sub">Boards, lists, and cards that sync live across everyone who has them open.</p>
           </div>
-          <span style={{ color: "#7d7ea0", fontSize: 13 }}>Built with React + FastAPI</span>
+          {/* WITH THIS UPDATED DYNAMIC VERSION: */}
+          <span style={{ color: "#7d7ea0", fontSize: 13, fontFamily: "monospace" }}>
+            Connected to: {BASE.replace("http://", "").replace("https://", "")}
+          </span>
         </aside>
 
         <main className="auth-form-side">
