@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     # CORS: the frontend dev server origin.
     cors_origins: str = "http://localhost:5173"
 
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
+
     # Used by the background reminder job.
     reminder_check_interval_seconds: int = 60
 

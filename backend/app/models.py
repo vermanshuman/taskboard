@@ -21,7 +21,8 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-
+    avatar_color = Column(String(7), nullable=False, default="#5546e1")
+    full_name = Column(String(255), nullable=True, default="Anonymous User")
     memberships = relationship(
         "BoardMembership", back_populates="user", cascade="all, delete-orphan"
     )
@@ -45,6 +46,13 @@ class Board(Base):
         back_populates="board",
         cascade="all, delete-orphan",
         order_by="List.position",
+    )
+    # Added relationship hook for active audit logs
+    activity_logs = relationship(
+        "ActivityLog",
+        back_populates="board",
+        cascade="all, delete-orphan",
+        order_by="ActivityLog.created_at.desc()",
     )
 
 
@@ -96,3 +104,15 @@ class Card(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     list = relationship("List", back_populates="cards")
+
+
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    board_id = Column(Integer, ForeignKey("boards.id", ondelete="CASCADE"), nullable=False)
+    user_email = Column(String(255), nullable=False)
+    action_text = Column(String(500), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    board = relationship("Board", back_populates="activity_logs")

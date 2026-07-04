@@ -4,7 +4,7 @@ from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from . import models
+from . import models, schemas
 from .config import settings
 from .database import Base, engine, get_db
 from .deps import get_current_user
@@ -43,9 +43,9 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/api/me", response_model=None)
-def me(user: models.User = Depends(get_current_user)):
-    return {"id": user.id, "email": user.email}
+@app.get("/api/me", response_model=schemas.UserOut)
+def get_current_user_profile(current_user: models.User = Depends(get_current_user)):
+    return current_user
 
 
 @app.websocket("/ws/boards/{board_id}")

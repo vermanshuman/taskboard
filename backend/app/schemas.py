@@ -1,5 +1,4 @@
 from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 
@@ -7,13 +6,19 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
+    full_name: str | None = "Anonymous User"
 
 
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     email: EmailStr
+    avatar_color: str
+    full_name: str | None
 
+# Add this new class mapping near your auth schemas block
+class ProfileUpdate(BaseModel):
+    avatar_color: str
 
 class Token(BaseModel):
     access_token: str
@@ -74,6 +79,15 @@ class ListOut(BaseModel):
     cards: list[CardOut] = []
 
 
+# ---- audit log ----
+class ActivityLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    user_email: str
+    action_text: str
+    created_at: datetime
+
+
 # ---- boards ----
 class BoardCreate(BaseModel):
     name: str
@@ -88,6 +102,8 @@ class BoardOut(BaseModel):
 
 class BoardDetail(BoardOut):
     lists: list[ListOut] = []
+    activity_logs: list[ActivityLogOut] = []  # Added active audit history log layer
+
 
 # ---- agent ----
 class AgentPromptRequest(BaseModel):
