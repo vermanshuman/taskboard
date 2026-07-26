@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     # OpenAI API configuration for the AI Agent features
     openai_api_key: str = ""
 
+    # OpenAI embeddings configuration for AI semantic search
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dimensions: int = 1536
+    semantic_search_top_k: int = 10
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in settings.cors_origins.split(",") if o.strip()]

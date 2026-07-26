@@ -8,7 +8,7 @@ from . import models, schemas
 from .config import settings
 from .database import Base, engine, get_db
 from .deps import get_current_user
-from .routers import auth, boards, cards, lists, stats, agent
+from .routers import auth, boards, cards, lists, stats, agent, search
 from .security import decode_token
 from .tasks import reminder_loop
 from .websockets import manager, set_loop
@@ -29,6 +29,7 @@ app.include_router(lists.router)
 app.include_router(cards.router)
 app.include_router(stats.router)
 app.include_router(agent.router)
+app.include_router(search.router)
 
 
 @app.on_event("startup")

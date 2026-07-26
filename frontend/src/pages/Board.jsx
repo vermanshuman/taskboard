@@ -8,6 +8,7 @@ import BoardCanvas from "../components/board/BoardCanvas.jsx";
 import TaskDrawer from "../components/board/TaskDrawer.jsx";
 import ActivitySidebar from "../components/board/ActivitySidebar.jsx";
 import AgentChat from "../components/board/AgentChat.jsx";
+import SemanticSearch from "../components/board/SemanticSearch.jsx";
 
 const PALETTE_OPTIONS = ["#5546e1", "#1ba9a0", "#e0883b", "#c2497f", "#3b82d0", "#2ecc71", "#e74c3c", "#f1c40f"];
 
@@ -108,6 +109,18 @@ export default function Board() {
         setSelectedCard(card);
         setModalDescription(card.description || "");
         setModalLabels(card.labels || "");
+    }
+
+    function handleSelectSearchResult(result) {
+        const list = board.lists.find((l) => l.id === result.list_id);
+        const card = list && list.cards.find((c) => c.id === result.card_id);
+        if (card) {
+            openDetailsModal(card);
+            setTimeout(() => {
+                const el = document.getElementById("card-" + card.id);
+                if (el) el.scrollIntoView({behavior: "smooth", block: "center"});
+            }, 50);
+        }
     }
 
     async function addList() {
@@ -338,6 +351,10 @@ export default function Board() {
                 isChatOpen={isChatOpen} setIsChatOpen={setIsChatOpen} chatInput={chatInput} setChatInput={setChatInput}
                 chatHistory={chatHistory} isAgentLoading={isAgentLoading} handleSendMessage={handleSendMessage}
                 chatEndRef={chatEndRef} isSidebarOpen={isSidebarOpen}
+            />
+
+            <SemanticSearch
+                boardId={id} isSidebarOpen={isSidebarOpen} onSelectCard={handleSelectSearchResult}
             />
         </>
     );

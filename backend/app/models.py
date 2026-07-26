@@ -102,6 +102,7 @@ class Card(Base):
     reminder_sent = Column(Integer, default=0)  # 0/1; used by the reminder job
     list_id = Column(Integer, ForeignKey("lists.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    embedding = Column(Text, nullable=True)  # JSON-serialized list[float]; null until (re)indexed
 
     list = relationship("List", back_populates="cards")
 

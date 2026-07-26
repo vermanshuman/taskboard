@@ -104,6 +104,12 @@ export const api = {
   // agent
   askAgent: (boardId, prompt) =>
       request(`/api/boards/${boardId}/agent/create-card`, { method: "POST", body: { prompt } }),
+
+  // semantic search
+  semanticSearch: (boardId, query) =>
+      request(`/api/boards/${boardId}/search/semantic`, { method: "POST", body: { query } }),
+  reindexSearch: (boardId) =>
+      request(`/api/boards/${boardId}/search/reindex`, { method: "POST" }),
 };
 
 // Open a live WebSocket for a board. onMessage receives parsed event objects.

@@ -108,3 +108,21 @@ class BoardDetail(BoardOut):
 # ---- agent ----
 class AgentPromptRequest(BaseModel):
     prompt: str
+
+
+# ---- semantic search ----
+class SemanticSearchRequest(BaseModel):
+    query: str
+
+
+class SemanticSearchResult(BaseModel):
+    card_id: int
+    title: str
+    description: str
+    list_id: int
+    list_name: str
+    score: float
+
+
+class SemanticSearchResponse(BaseModel):
+    results: list[SemanticSearchResult]

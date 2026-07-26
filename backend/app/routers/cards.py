@@ -9,6 +9,7 @@ from .. import models, schemas
 from ..config import settings
 from ..database import get_db
 from ..deps import get_current_user, require_board_access
+from ..embeddings import try_update_card_embedding
 from ..websockets import notify
 
 router = APIRouter(prefix="/api/boards/{board_id}/cards", tags=["cards"])
@@ -50,6 +51,7 @@ def create_card(
         position=(max_pos or 0) + 1,
     )
     db.add(card)
+    try_update_card_embedding(card, db)
 
     # Audit log creation
     log = models.ActivityLog(
@@ -79,6 +81,8 @@ def update_card(
     data = payload.model_dump(exclude_unset=True)
     for field, value in data.items():
         setattr(card, field, value)
+    if "title" in data or "description" in data:
+        try_update_card_embedding(card, db)
 
     # Audit log update
     log = models.ActivityLog(
