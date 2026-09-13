@@ -120,7 +120,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
 
     # 5. Route back to client app layout embedding token state inside URI queries
     encoded_name = urllib.parse.quote(user.full_name)
-    frontend_redirect_url = f"http://localhost:5173/login?token={local_jwt}&email={user.email}&name={encoded_name}"
+    frontend_redirect_url = f"{settings.frontend_url.rstrip('/')}/?token={local_jwt}&email={user.email}&name={encoded_name}"
     return RedirectResponse(frontend_redirect_url)
 
 

@@ -9,3 +9,6 @@ backend/uploads/
 # Node
 node_modules/
 dist/
+
+# IDE
+.idea/

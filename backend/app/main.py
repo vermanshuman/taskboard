@@ -1,19 +1,36 @@
 import asyncio
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
 
 from . import models, schemas
 from .config import settings
-from .database import Base, engine, get_db
+from .database import SessionLocal, ensure_schema
 from .deps import get_current_user
-from .routers import auth, boards, cards, lists, stats, agent, search
+from .routers import auth, boards, cards, lists, stats, agent, search, public_agent
 from .security import decode_token
 from .tasks import reminder_loop
 from .websockets import manager, set_loop
 
-app = FastAPI(title="Collaborative Task Board API")
+# How long a freshly opened socket has to send its auth message.
+WS_AUTH_TIMEOUT_SECONDS = 5
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    ensure_schema()
+    set_loop(asyncio.get_running_loop())
+    await manager.start()
+    reminder_task = asyncio.create_task(reminder_loop())
+    try:
+        yield
+    finally:
+        reminder_task.cancel()
+        await manager.stop()
+
+
+app = FastAPI(title="Collaborative Task Board API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,18 +47,12 @@ app.include_router(cards.router)
 app.include_router(stats.router)
 app.include_router(agent.router)
 app.include_router(search.router)
-
-
-@app.on_event("startup")
-async def on_startup() -> None:
-    Base.metadata.create_all(bind=engine)
-    set_loop(asyncio.get_running_loop())
-    asyncio.create_task(reminder_loop())
+app.include_router(public_agent.router)
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "realtime": "redis" if manager.using_redis else "in-process"}
 
 
 @app.get("/api/me", response_model=schemas.UserOut)
@@ -50,24 +61,37 @@ def get_current_user_profile(current_user: models.User = Depends(get_current_use
 
 
 @app.websocket("/ws/boards/{board_id}")
-async def board_ws(websocket: WebSocket, board_id: int, token: str = ""):
-    """Live board updates. Client connects with ?token=<jwt>.
+async def board_ws(websocket: WebSocket, board_id: int):
+    """Live board updates.
 
-    Access is verified against board membership before accepting the socket.
+    Auth protocol: the socket is accepted, then the client must send
+    {"type": "auth", "token": "<jwt>"} as its first message within a few
+    seconds. Keeping the token out of the URL keeps it out of access logs and
+    browser history. Close codes: 4401 bad/missing token, 4403 not a member.
     """
-    user_id = decode_token(token)
+    await websocket.accept()
+    try:
+        first = await asyncio.wait_for(
+            websocket.receive_json(), timeout=WS_AUTH_TIMEOUT_SECONDS
+        )
+    except (asyncio.TimeoutError, WebSocketDisconnect, ValueError):
+        await websocket.close(code=4401)
+        return
+
+    token = first.get("token") if isinstance(first, dict) else None
+    user_id = decode_token(token or "")
     if user_id is None:
         await websocket.close(code=4401)
         return
 
-    db: Session = next(get_db())
+    db = SessionLocal()
     try:
         member = (
             db.query(models.BoardMembership)
             .filter_by(board_id=board_id, user_id=user_id)
             .first()
         )
-        user = db.query(models.User).get(user_id)
+        user = db.get(models.User, user_id)
         email = user.email if user else "unknown"
     finally:
         db.close()
@@ -79,8 +103,10 @@ async def board_ws(websocket: WebSocket, board_id: int, token: str = ""):
     await manager.broadcast_presence(board_id)
     try:
         while True:
-            # We don't require client messages; keep the socket open.
+            # Clients don't need to send anything else; this keeps the socket open.
             await websocket.receive_text()
     except WebSocketDisconnect:
+        pass
+    finally:
         await manager.disconnect(board_id, websocket)
         await manager.broadcast_presence(board_id)

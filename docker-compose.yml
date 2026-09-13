@@ -21,7 +21,8 @@ services:
       DATABASE_URL: postgresql://taskboard:taskboard@db:5432/taskboard
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: change-me-in-production
-      CORS_ORIGINS: http://localhost:5173
+      CORS_ORIGINS: http://localhost:3000
+      FRONTEND_URL: http://localhost:3000
     ports:
       - "8000:8000"
     depends_on:
@@ -31,9 +32,9 @@ services:
   frontend:
     build: ./frontend
     environment:
-      VITE_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8000
     ports:
-      - "5173:5173"
+      - "3000:3000"
     depends_on:
       - backend
 

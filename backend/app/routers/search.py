@@ -5,12 +5,7 @@ from .. import models, schemas
 from ..config import settings
 from ..database import get_db
 from ..deps import get_current_user, require_board_access
-from ..embeddings import (
-    cosine_similarity,
-    deserialize_embedding,
-    embed_text,
-    try_update_card_embedding,
-)
+from ..embeddings import embed_text, rank_by_similarity, try_update_card_embedding
 
 router = APIRouter(prefix="/api/boards/{board_id}/search", tags=["search"])
 
@@ -42,26 +37,20 @@ def semantic_search(
             detail=f"Failed to reach embedding model: {str(e)}"
         )
 
-    cards = (
-        db.query(models.Card)
+    # Only pull the two columns we need for scoring; hydrate the winners after.
+    candidates = (
+        db.query(models.Card.id, models.Card.embedding)
         .join(models.List)
-        .filter(models.List.board_id == board_id)
+        .filter(models.List.board_id == board_id, models.Card.embedding.isnot(None))
         .all()
     )
+    ranked = rank_by_similarity(query_vec, candidates, settings.semantic_search_top_k)
+    if not ranked:
+        return schemas.SemanticSearchResponse(results=[])
 
-    scored = []
-    for card in cards:
-        if not card.embedding:
-            continue
-        try:
-            vec = deserialize_embedding(card.embedding)
-        except Exception:
-            continue
-        score = cosine_similarity(query_vec, vec)
-        scored.append((score, card))
-
-    scored.sort(key=lambda pair: pair[0], reverse=True)
-    top = scored[: settings.semantic_search_top_k]
+    score_by_id = dict(ranked)
+    cards = db.query(models.Card).filter(models.Card.id.in_(score_by_id)).all()
+    cards.sort(key=lambda c: -score_by_id[c.id])
 
     return schemas.SemanticSearchResponse(results=[
         schemas.SemanticSearchResult(
@@ -70,9 +59,9 @@ def semantic_search(
             description=c.description,
             list_id=c.list_id,
             list_name=c.list.name,
-            score=round(s, 4),
+            score=round(score_by_id[c.id], 4),
         )
-        for s, c in top
+        for c in cards
     ])
 
 

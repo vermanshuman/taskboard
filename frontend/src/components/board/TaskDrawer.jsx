@@ -1,141 +1,178 @@
-import React from "react";
+"use client";
 
+import { useRef } from "react";
+import ConfirmDialog from "@/components/ConfirmDialog.jsx";
+
+const Icon = {
+  card: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" strokeWidth="2">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <line x1="9" y1="3" x2="9" y2="21" />
+    </svg>
+  ),
+  lines: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2">
+      <line x1="21" y1="10" x2="3" y2="10" /><line x1="21" y1="6" x2="3" y2="6" />
+      <line x1="21" y1="14" x2="3" y2="14" /><line x1="21" y1="18" x2="3" y2="18" />
+    </svg>
+  ),
+  tag: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <line x1="7" y1="7" x2="7.01" y2="7" strokeWidth="3" />
+    </svg>
+  ),
+  calendar: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2">
+      <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  ),
+  clip: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2">
+      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+    </svg>
+  ),
+};
+
+/**
+ * Card editor. `form` holds the editable fields (title, description, labels,
+ * dueDate as YYYY-MM-DD or ""); `attachment` holds upload/download/remove
+ * handlers and their busy/error state.
+ */
 export default function TaskDrawer({
-                                       selectedCard,
-                                       setSelectedCard,
-                                       modalDescription,
-                                       setModalDescription,
-                                       modalLabels,
-                                       setModalLabels,
-                                       isSavingModal,
-                                       handleSaveCardDetails,
-                                       cardIdToDelete,
-                                       setCardIdToDelete,
-                                       executeConfirmDelete
-                                   }) {
-    if (!selectedCard) return null;
+  selectedCard,
+  onClose,
+  form,
+  setForm,
+  isSaving,
+  onSave,
+  cardIdToDelete,
+  setCardIdToDelete,
+  executeConfirmDelete,
+  attachment,
+}) {
+  const fileInputRef = useRef(null);
+  if (!selectedCard) return null;
 
-    return (
-        <>
-            <div className="modal-overlay" style={{ justifyContent: "flex-start" }} onClick={() => setSelectedCard(null)}>
-                <div className="left-drawer-container" onClick={(e) => e.stopPropagation()}>
-                    {/* Drawer Header */}
-                    <div style={{ padding: "28px 24px 16px 24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid #dcdfe4" }}>
-                        <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#44546f" strokeWidth="2" style={{ marginTop: "2px" }}>
-                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                <line x1="9" y1="3" x2="9" y2="21"></line>
-                            </svg>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: "20px", fontWeight: "600", color: "#172b4d", lineHeight: "1.3" }}>
-                                    {selectedCard.title}
-                                </h3>
-                                {selectedCard.due_date && (
-                                    <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
-                                        <span style={{ fontSize: "11px", fontWeight: "700", color: "#44546f", textTransform: "uppercase", letterSpacing: "0.5px" }}>Due Date</span>
-                                        <span style={{ fontSize: "12px", padding: "2px 8px", backgroundColor: "#e2e4e9", borderRadius: "4px", color: "#172b4d", fontWeight: "500" }}>
-                      {new Date(selectedCard.due_date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                    </span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => setSelectedCard(null)}
-                            style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: "#626f86", padding: "6px", borderRadius: "50%", display: "flex" }}
-                        >
-                            ✕
-                        </button>
-                    </div>
+  const set = (field) => (e) => setForm({ ...form, [field]: e.target.value });
 
-                    {/* Drawer Body */}
-                    <div style={{ flexGrow: 1, padding: "24px", display: "flex", flexDirection: "column", gap: "24px", overflowY: "auto" }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#44546f" strokeWidth="2">
-                                    <line x1="21" y1="10" x2="3" y2="10"></line>
-                                    <line x1="21" y1="6" x2="3" y2="6"></line>
-                                    <line x1="21" y1="14" x2="3" y2="14"></line>
-                                    <line x1="21" y1="18" x2="3" y2="18"></line>
-                                </svg>
-                                <label style={{ fontSize: "14px", fontWeight: "600", color: "#172b4d" }}>Description</label>
-                            </div>
-                            <textarea
-                                className="input"
-                                style={{ minHeight: "140px", padding: "12px", resize: "vertical", width: "100%", backgroundColor: "#fff", border: "1px solid #c1c7d0", borderRadius: "6px", fontSize: "14px", color: "#172b4d", lineHeight: "1.5" }}
-                                placeholder="Add details for this task..."
-                                value={modalDescription}
-                                onChange={(e) => setModalDescription(e.target.value)}
-                            />
-                        </div>
+  return (
+    <>
+      <div className="modal-overlay left" onClick={onClose}>
+        <div className="drawer" onClick={(e) => e.stopPropagation()}>
+          <div className="drawer-head">
+            <div style={{ display: "flex", gap: "12px", alignItems: "flex-start", flex: 1, minWidth: 0 }}>
+              <span className="drawer-label" style={{ marginTop: 4 }}>{Icon.card}</span>
+              <input
+                className="drawer-title-input"
+                value={form.title}
+                onChange={set("title")}
+                placeholder="Card title"
+                aria-label="Card title"
+              />
+            </div>
+            <button className="icon-btn" onClick={onClose} aria-label="Close">✕</button>
+          </div>
 
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#44546f" strokeWidth="2">
-                                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-                                    <line x1="7" y1="7" x2="7.01" y2="7" strokeWidth="3"></line>
-                                </svg>
-                                <label style={{ fontSize: "14px", fontWeight: "600", color: "#172b4d" }}>Labels</label>
-                            </div>
-                            <input
-                                type="text"
-                                className="input"
-                                style={{ width: "100%", backgroundColor: "#fff", border: "1px solid #c1c7d0", borderRadius: "6px", padding: "10px 12px", fontSize: "14px", color: "#172b4d" }}
-                                placeholder="e.g. bug, critical"
-                                value={modalLabels}
-                                onChange={(e) => setModalLabels(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Drawer Actions Footer */}
-                    <div style={{ padding: "16px 24px", backgroundColor: "#fff", borderTop: "1px solid #dcdfe4", display: "flex", gap: "12px", justifyContent: "flex-end", alignItems: "center" }}>
-                        <button
-                            className="btn btn-ghost"
-                            style={{ color: "#ae2e2e", fontWeight: "600" }}
-                            onClick={() => setCardIdToDelete(selectedCard.id)}
-                            disabled={isSavingModal}
-                        >
-                            Delete Card
-                        </button>
-                        <div style={{ flexGrow: 1 }} />
-                        <button className="btn btn-ghost" style={{ border: "1px solid #dcdfe4", backgroundColor: "#f4f5f7" }} onClick={() => setSelectedCard(null)}>
-                            Cancel
-                        </button>
-                        <button className="btn btn-primary" onClick={handleSaveCardDetails} disabled={isSavingModal}>
-                            Save Changes
-                        </button>
-                    </div>
-                </div>
+          <div className="drawer-body">
+            <div className="drawer-section">
+              <label className="drawer-label">{Icon.calendar} Due date</label>
+              <div className="due-row">
+                <input className="input" type="date" value={form.dueDate} onChange={set("dueDate")} />
+                {form.dueDate && (
+                  <button className="btn btn-ghost btn-sm" onClick={() => setForm({ ...form, dueDate: "" })}>
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Styled Delete Confirmation Dialog */}
-            {cardIdToDelete && (
-                <div className="modal-overlay" style={{ zIndex: 1000 }} onClick={() => setCardIdToDelete(null)}>
-                    <div style={{ backgroundColor: "#fff", width: "400px", borderRadius: "8px", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)", overflow: "hidden", border: "1px solid #dcdfe4" }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ padding: "20px 24px 12px 24px", display: "flex", alignItems: "center", gap: "12px" }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#ffebee", padding: "8px", borderRadius: "50%" }}>
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c62828" strokeWidth="2">
-                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                                    <line x1="12" y1="9" x2="12" y2="13"></line>
-                                </svg>
-                            </div>
-                            <h4 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: "#172b4d" }}>Delete this card?</h4>
-                        </div>
-                        <div style={{ padding: "0 24px 20px 24px", fontSize: "14px", color: "#44546f", lineHeight: "1.5" }}>
-                            All history, label bindings, and descriptive details tied to this task card will be permanently erased. This action cannot be undone.
-                        </div>
-                        <div style={{ padding: "12px 24px", backgroundColor: "#f4f5f7", borderTop: "1px solid #dcdfe4", display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-                            <button className="btn btn-ghost" style={{ border: "1px solid #dcdfe4", backgroundColor: "#fff" }} onClick={() => setCardIdToDelete(null)}>
-                                Keep Card
-                            </button>
-                            <button className="btn btn-primary" style={{ backgroundColor: "#c62828", border: "none" }} onClick={executeConfirmDelete}>
-                                Yes, Delete
-                            </button>
-                        </div>
-                    </div>
+            <div className="drawer-section">
+              <label className="drawer-label">{Icon.lines} Description</label>
+              <textarea
+                className="textarea"
+                placeholder="Add details for this task..."
+                value={form.description}
+                onChange={set("description")}
+              />
+            </div>
+
+            <div className="drawer-section">
+              <label className="drawer-label">{Icon.tag} Labels</label>
+              <input
+                type="text"
+                className="input"
+                placeholder="e.g. bug, critical"
+                value={form.labels}
+                onChange={set("labels")}
+              />
+            </div>
+
+            <div className="drawer-section">
+              <label className="drawer-label">{Icon.clip} Attachment</label>
+              {selectedCard.attachment_name ? (
+                <div className="attachment-row">
+                  <button className="attachment-link" onClick={attachment.download} disabled={attachment.busy}>
+                    {selectedCard.attachment_name}
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={attachment.remove} disabled={attachment.busy}>
+                    Remove
+                  </button>
                 </div>
-            )}
-        </>
-    );
+              ) : (
+                <div className="attachment-row">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) attachment.upload(f);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    className="btn btn-ghost btn-outline btn-sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={attachment.busy}
+                  >
+                    {attachment.busy ? "Uploading…" : "+ Attach a file"}
+                  </button>
+                  <span className="dialog-hint">Max 10 MB</span>
+                </div>
+              )}
+              {attachment.error && <p className="form-error" style={{ margin: 0 }}>{attachment.error}</p>}
+            </div>
+          </div>
+
+          <div className="drawer-foot">
+            <button
+              className="btn btn-ghost btn-danger-ghost"
+              onClick={() => setCardIdToDelete(selectedCard.id)}
+              disabled={isSaving}
+            >
+              Delete card
+            </button>
+            <div className="spacer" />
+            <button className="btn btn-ghost btn-outline" onClick={onClose}>
+              Cancel
+            </button>
+            <button className="btn btn-primary" onClick={onSave} disabled={isSaving || !form.title.trim()}>
+              {isSaving ? "Saving…" : "Save changes"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={Boolean(cardIdToDelete)}
+        title="Delete this card?"
+        body="Its description, labels, attachment and history will be permanently removed. This cannot be undone."
+        confirmLabel="Yes, delete"
+        onConfirm={executeConfirmDelete}
+        onCancel={() => setCardIdToDelete(null)}
+      />
+    </>
+  );
 }

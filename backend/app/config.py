@@ -12,8 +12,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24  # 24h
 
-    # CORS: the frontend dev server origin.
-    cors_origins: str = "http://localhost:5173"
+    # CORS: the frontend dev server origin(s), comma-separated.
+    cors_origins: str = "http://localhost:3000,http://localhost:5173"
+
+    # Where the Google OAuth callback sends the browser back to (the frontend).
+    frontend_url: str = "http://localhost:3000"
 
     google_client_id: str = ""
     google_client_secret: str = ""

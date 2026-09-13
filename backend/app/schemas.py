@@ -56,7 +56,9 @@ class CardOut(BaseModel):
     due_date: datetime | None
     labels: str
     attachment_path: str | None
+    attachment_name: str | None
     completed: int
+    completed_at: datetime | None
     list_id: int
 
 
@@ -88,6 +90,20 @@ class ActivityLogOut(BaseModel):
     created_at: datetime
 
 
+# ---- members ----
+class MemberAdd(BaseModel):
+    email: EmailStr
+
+
+class MemberOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    user_id: int
+    email: EmailStr
+    full_name: str | None
+    avatar_color: str
+    role: str
+
+
 # ---- boards ----
 class BoardCreate(BaseModel):
     name: str
@@ -98,16 +114,18 @@ class BoardOut(BaseModel):
     id: int
     name: str
     owner_id: int
+    role: str = "member"  # the requesting user's role on this board
 
 
 class BoardDetail(BoardOut):
     lists: list[ListOut] = []
-    activity_logs: list[ActivityLogOut] = []  # Added active audit history log layer
+    members: list[MemberOut] = []
+    activity_logs: list[ActivityLogOut] = []  # most recent ACTIVITY_PREVIEW only; page via /activity
 
 
-# ---- agent ----
-class AgentPromptRequest(BaseModel):
-    prompt: str
+class ActivityPage(BaseModel):
+    items: list[ActivityLogOut]
+    next_before_id: int | None  # pass as ?before_id= to get the next (older) page; null = end
 
 
 # ---- semantic search ----

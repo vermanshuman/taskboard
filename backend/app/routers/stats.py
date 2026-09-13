@@ -22,19 +22,24 @@ def board_stats(
         {"list": lst.name, "count": len(lst.cards)} for lst in board.lists
     ]
 
-    # completed cards grouped by ISO week, last 8 weeks
+    # Completed cards grouped by ISO week of *completion*, last 8 weeks.
+    # Cards completed before completed_at existed fall back to created_at.
     all_cards = [c for lst in board.lists for c in lst.cards]
     now = datetime.utcnow()
     weeks: dict[str, int] = {}
     for i in range(7, -1, -1):
         week_start = now - timedelta(weeks=i)
-        label = week_start.strftime("%Y-W%V")
+        label = week_start.strftime("%G-W%V")
         weeks[label] = 0
     for c in all_cards:
-        if c.completed and c.created_at:
-            label = c.created_at.strftime("%Y-W%V")
-            if label in weeks:
-                weeks[label] += 1
+        if not c.completed:
+            continue
+        when = c.completed_at or c.created_at
+        if when is None:
+            continue
+        label = when.strftime("%G-W%V")
+        if label in weeks:
+            weeks[label] += 1
 
     return {
         "cards_per_list": cards_per_list,

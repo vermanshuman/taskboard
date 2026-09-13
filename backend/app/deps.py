@@ -17,7 +17,7 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
-    user = db.query(models.User).get(user_id)
+    user = db.get(models.User, user_id)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
@@ -29,7 +29,7 @@ def require_board_access(
     board_id: int, db: Session, user: models.User, owner_only: bool = False
 ) -> models.Board:
     """Return the board if the user is owner/member, else 403/404."""
-    board = db.query(models.Board).get(board_id)
+    board = db.get(models.Board, board_id)
     if board is None:
         raise HTTPException(status_code=404, detail="Board not found")
 

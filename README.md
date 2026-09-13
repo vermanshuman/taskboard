@@ -2,37 +2,36 @@
 
 A real-time, Trello-style task board. Full-stack portfolio project.
 
-**Stack:** React (Vite) · FastAPI (Python) · Postgres · Redis · WebSockets · Docker
+**Stack:** Next.js (React) · FastAPI (Python) · Postgres · Redis · WebSockets · OpenAI · Docker
 
 ---
 
-## What's already built (backend — done & tested)
+## Features
 
-- JWT auth: register / login, owner vs member roles
-- Boards → Lists → Cards relational model with cascade deletes
-- Full REST CRUD for boards, lists, cards
-- Card move/reorder endpoint (drag-and-drop target)
-- File attachment upload per card
-- WebSocket live sync — every change broadcasts to other open sessions
-- Live presence — see who else is viewing a board in real time (avatars + count)
-- Reminder toasts — the background due-date job surfaces as a toast in the UI
-- Due-date color coding — overdue (red) and due-soon (amber) cards
-- Background due-date reminder job (in-process; Redis/Celery-ready)
-- Stats endpoint: cards per list + completed-per-week
+**Boards & cards**
+- Boards → Lists → Cards with drag-and-drop between and within columns
+- Inline list rename / delete, board delete (owner), card editor drawer (title, due date, description, labels, attachment)
+- Board sharing: owner invites registered users by email; members can leave
+- Live sync over WebSockets — every change appears in other open sessions instantly
+- Live presence (who else is viewing), reminder toasts for cards due within 24h, due-date colour coding
+- Activity feed with paging; project-health metrics (cards per column, completed per week)
+
+**AI (needs `OPENAI_API_KEY`)**
+- Board agent: chat that creates, moves, edits, completes and deletes cards, adds columns, and answers questions
+  about the board ("what's overdue?", "summarise for standup"). Streams replies, remembers context, flags likely
+  duplicates, and asks before bulk or destructive changes
+- Semantic search: find cards by meaning using OpenAI embeddings (written in the background on create/update)
+
+**Landing page**
+- Public `/` with product overview, sign-in / sign-up, one-click demo, and a no-login AI guide that answers
+  questions and previews how the planning agent would split work into cards
+
+**Auth & infra**
+- JWT auth (email/password or Google sign-in), owner vs member roles
+- Next.js proxy redirects unauthenticated navigations on the server (token mirrored in a cookie)
+- SQLite by default, Postgres via `DATABASE_URL`; startup adds any missing columns automatically
+- Optional Redis pub/sub so multiple backend instances share broadcasts and presence
 - Seed script: demo user + sample board so the demo is never empty
-
-## What the frontend developer continues
-
-The frontend is a **runnable starter**, not finished. It already has:
-- API client wrapping every endpoint (`src/lib/api.js`)
-- WebSocket helper (`openBoardSocket`)
-- Auth flow, board list, and a basic board view that reloads live on changes
-
-The FE developer's job:
-- Real **drag-and-drop** (e.g. `@hello-pangea/dnd` or `dnd-kit`) calling `api.moveCard`
-- Card detail modal: description, due date, labels, file upload
-- Stats view (charts) from `api.getStats`
-- Styling / responsive layout
 
 ---
 
@@ -48,7 +47,7 @@ docker compose up --build
 ```
 
 Then open:
-- App: http://localhost:5173
+- App: http://localhost:3000 (landing page + sign-in; `/boards` once signed in)
 - API docs: http://localhost:8000/docs
 
 The backend auto-seeds on startup. Log in with **demo@taskboard.dev / demo1234**.
@@ -73,7 +72,7 @@ cd taskboard\frontend
 npm install
 npm run dev
 ```
-Open http://localhost:5173
+Open http://localhost:3000
 
 ---
 
@@ -84,12 +83,13 @@ it and sends `Authorization: Bearer <token>` on every request. `get_current_user
 (in `deps.py`) decodes the token and loads the user; `require_board_access` then
 checks the user is a member of the board before any board operation.
 
-**WebSocket flow:** the client opens `ws://.../ws/boards/{id}?token=<jwt>`. The
-server verifies board membership before accepting the socket. CRUD routes run
+**WebSocket flow:** the client opens `ws://.../ws/boards/{id}` and sends
+`{"type":"auth","token":"<jwt>"}` as its first message (keeps the token out of
+URLs and logs). The server verifies board membership before events flow. CRUD routes run
 synchronously in a threadpool; after a change they call `notify(board_id, event)`,
 which uses `run_coroutine_threadsafe` to schedule a broadcast on the main event
 loop. `BoardConnectionManager` (in `websockets.py`) fans the event out to every
-socket watching that board. The starter frontend reloads the board on any event;
+socket watching that board. The frontend refetches the board on any event (debounced);
 a production version would apply the specific event.
 
 **Background reminders:** `tasks.py` runs an asyncio loop started at app startup.
@@ -97,8 +97,10 @@ Every interval it finds cards due within 24h that haven't been reminded, broadca
 a `reminder` event, and marks them sent. For durability/scale this can move to a
 Celery beat task using the Redis broker already in `docker-compose.yml`.
 
-**Scaling note:** the WebSocket manager and reminder loop are in-process, fine for
-one backend instance. For multiple instances, back them with Redis pub/sub.
+**Scaling note:** with no Redis, the WebSocket manager and reminder loop are
+in-process (one backend instance). If `REDIS_URL` is reachable at startup, broadcasts
+go through Redis pub/sub, presence is shared, and a Redis lock stops instances
+sending duplicate reminders — so you can run several backends behind a load balancer.
 
 ---
 
@@ -125,11 +127,9 @@ taskboard/
 └─ frontend/
    ├─ Dockerfile
    ├─ package.json
-   ├─ vite.config.js
-   ├─ index.html
+   ├─ next.config.mjs
    └─ src/
-      ├─ main.jsx
-      ├─ App.jsx          # routes + auth guard
-      ├─ lib/api.js       # API client + websocket helper
-      └─ pages/           # Login, Boards, Board
+      ├─ app/             # Next.js App Router: layout, /, /login, /boards/[id], /profile
+      ├─ components/      # RequireAuth, BoardsPage, BoardPage, board/* panels
+      └─ lib/api.js       # API client + websocket helper
 ```

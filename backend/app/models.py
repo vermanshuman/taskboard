@@ -98,7 +98,9 @@ class Card(Base):
     due_date = Column(DateTime, nullable=True)
     labels = Column(String(500), default="")  # comma-separated label names
     attachment_path = Column(String(500), nullable=True)
+    attachment_name = Column(String(255), nullable=True)  # original filename for display/download
     completed = Column(Integer, default=0)  # 0/1; used by the stats view
+    completed_at = Column(DateTime, nullable=True)  # set when completed flips to 1; drives stats
     reminder_sent = Column(Integer, default=0)  # 0/1; used by the reminder job
     list_id = Column(Integer, ForeignKey("lists.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

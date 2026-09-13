@@ -1,6 +1,10 @@
+"use client";
+
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { api, setToken, setEmail, getEmail } from "../lib/api.js";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { api, clearSession, useSessionValue } from "@/lib/api.js";
+import ConfirmDialog from "@/components/ConfirmDialog.jsx";
 
 const SPINES = [
   "var(--spine-1)",
@@ -10,24 +14,30 @@ const SPINES = [
   "var(--spine-5)",
 ];
 
-export default function Boards() {
+export default function BoardsPage() {
   const [boards, setBoards] = useState([]);
   const [name, setName] = useState("");
   const [loaded, setLoaded] = useState(false);
-  const navigate = useNavigate();
-  const email = getEmail();
+  const email = useSessionValue("email") || "";
+  const [pendingDelete, setPendingDelete] = useState(null); // board awaiting confirm
+  const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
 
   async function load() {
     try {
       setBoards(await api.listBoards());
       setLoaded(true);
     } catch {
-      setToken(null);
-      navigate("/login");
+      clearSession();
+      router.replace("/");
     }
   }
+
   useEffect(() => {
+    // load() is async and only sets state after awaiting the API.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function create() {
@@ -37,16 +47,27 @@ export default function Boards() {
     load();
   }
 
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await api.deleteBoard(pendingDelete.id);
+      setPendingDelete(null);
+      load();
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   function logout() {
-    setToken(null);
-    setEmail(null);
-    navigate("/login");
+    clearSession();
+    router.replace("/");
   }
 
   return (
     <>
       <header className="topbar">
-        <Link to="/" className="wordmark">
+        <Link href="/boards" className="wordmark">
           <span className="dot" /> Stack Board
         </Link>
         <div className="topbar-right">
@@ -81,10 +102,24 @@ export default function Boards() {
 
         <div className="board-grid">
           {boards.map((b, i) => (
-            <Link key={b.id} to={`/boards/${b.id}`} className="board-tile">
+            <Link key={b.id} href={`/boards/${b.id}`} className="board-tile">
               <div className="spine" style={{ background: SPINES[i % SPINES.length] }} />
               <div className="name">{b.name}</div>
-              <div className="meta">Open board</div>
+              <div className="meta">{b.role === "owner" ? "Open board" : "Shared with you"}</div>
+              {b.role === "owner" && (
+                <button
+                  className="tile-delete"
+                  aria-label={`Delete ${b.name}`}
+                  title="Delete board"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setPendingDelete(b);
+                  }}
+                >
+                  ✕
+                </button>
+              )}
             </Link>
           ))}
 
@@ -102,6 +137,16 @@ export default function Boards() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={`Delete “${pendingDelete?.name}”?`}
+        body="All its lists, cards, attachments and history will be permanently removed for everyone it's shared with."
+        confirmLabel="Delete board"
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </>
   );
 }

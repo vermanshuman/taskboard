@@ -10,16 +10,30 @@ from .websockets import manager
 async def reminder_loop() -> None:
     """Periodically check for cards due soon and emit a reminder event.
 
-    v1 keeps this in-process for simplicity. To make it durable / horizontally
-    scalable, move this to a Celery beat task using the Redis broker that is
-    already provisioned in docker-compose.
+    When several backend instances share a Redis, a short-lived lock ensures
+    only one of them runs each tick so users don't get duplicate reminders.
+    Without Redis this is a single-instance loop.
     """
     while True:
         try:
-            await _check_due_cards()
+            if await _acquire_tick_lock():
+                await _check_due_cards()
+        except asyncio.CancelledError:
+            raise
         except Exception as exc:  # never let the loop die
             print(f"[reminder] error: {exc}")
         await asyncio.sleep(settings.reminder_check_interval_seconds)
+
+
+async def _acquire_tick_lock() -> bool:
+    if not manager.using_redis:
+        return True
+    # SET NX with a TTL slightly shorter than the interval: whichever instance
+    # gets there first owns this tick; the key expires before the next one.
+    ttl = max(1, settings.reminder_check_interval_seconds - 5)
+    return bool(
+        await manager._redis.set("reminder-tick-lock", "1", nx=True, ex=ttl)
+    )
 
 
 async def _check_due_cards() -> None:

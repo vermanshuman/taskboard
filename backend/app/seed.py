@@ -5,7 +5,7 @@ Idempotent: re-running won't duplicate the demo data.
 """
 from datetime import datetime, timedelta
 
-from .database import Base, SessionLocal, engine
+from .database import SessionLocal, ensure_schema
 from . import models
 from .security import hash_password
 
@@ -14,7 +14,7 @@ DEMO_PASSWORD = "demo1234"
 
 
 def run() -> None:
-    Base.metadata.create_all(bind=engine)
+    ensure_schema()
     db = SessionLocal()
     try:
         if db.query(models.User).filter_by(email=DEMO_EMAIL).first():
