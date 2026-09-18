@@ -27,6 +27,8 @@ export default function AgentChat({ boardId, isOpen, setIsOpen, onBoardChanged }
   const endRef = useRef(null);
   const abortRef = useRef(null);
   const sendRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const [dragOver, setDragOver] = useState(false);
 
   // Click-to-talk: interim words show in the input; when you pause, the final text is sent.
   const voice = useVoiceInput({
@@ -117,6 +119,71 @@ export default function AgentChat({ boardId, isOpen, setIsOpen, onBoardChanged }
     sendRef.current = send;
   });
 
+  /**
+   * Image → plan. A photo of sticky notes / a whiteboard becomes one card per
+   * item; an app screenshot becomes a single structured bug card. Always goes
+   * through the confirm card. Any text in the input is sent along as a note.
+   */
+  async function sendImage(file) {
+    if (!file || busy) return;
+    if (!file.type.startsWith("image/")) {
+      setMessages((m) => [...m, { role: "assistant", error: true, text: "That isn't an image — try a PNG, JPEG or WebP." }]);
+      return;
+    }
+    const note = input.trim();
+    const preview = URL.createObjectURL(file);
+    setMessages((m) => [
+      ...m,
+      { role: "user", text: note, image: preview, imageName: file.name },
+      { role: "assistant", text: "", streaming: true },
+    ]);
+    setInput("");
+    setBusy(true);
+    let touchedBoard = false;
+    try {
+      const ev = await api.agentVision(boardId, file, note);
+      if (ev.type === "plan") {
+        patchLast((m) => ({
+          ...m,
+          streaming: false,
+          text: ev.reply,
+          plan: { id: ev.plan_id, actions: ev.actions, skip: new Set(), status: "pending" },
+        }));
+      } else {
+        touchedBoard = (ev.applied || []).length > 0;
+        patchLast((m) => ({ ...m, streaming: false, text: ev.reply, applied: ev.applied }));
+      }
+    } catch (err) {
+      const msg = String(err.message || "");
+      const text = msg.startsWith("413")
+        ? "That image is over 6 MB — try a smaller one."
+        : msg.startsWith("415")
+          ? "Please use a PNG, JPEG, WebP or GIF."
+          : msg.startsWith("501")
+            ? "The AI agent isn't configured (missing OpenAI API key)."
+            : "Couldn't read that image. Please try again.";
+      patchLast((m) => ({ ...m, streaming: false, text, error: true }));
+    } finally {
+      setBusy(false);
+      if (touchedBoard) onBoardChanged();
+    }
+  }
+
+  function onPaste(e) {
+    const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/"));
+    if (item) {
+      e.preventDefault();
+      sendImage(item.getAsFile());
+    }
+  }
+
+  function onDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) sendImage(file);
+  }
+
   function toggleSkip(msgIndex, actionIndex) {
     setMessages((m) =>
       m.map((msg, i) => {
@@ -174,11 +241,29 @@ export default function AgentChat({ boardId, isOpen, setIsOpen, onBoardChanged }
       </button>
 
       {isOpen && (
-        <div className="panel panel-agent">
+        <div
+          className={`panel panel-agent ${dragOver ? "drag-over" : ""}`}
+          onPaste={onPaste}
+          onDragOver={(e) => {
+            if ([...(e.dataTransfer?.types || [])].includes("Files")) {
+              e.preventDefault();
+              setDragOver(true);
+            }
+          }}
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false);
+          }}
+          onDrop={onDrop}
+        >
           <div className="panel-head">Board agent</div>
+          {dragOver && <div className="drop-hint">Drop an image — sticky notes, a whiteboard, or a bug screenshot</div>}
           <div className="panel-body">
             {messages.map((m, i) => (
               <div key={i} className={`chat-row ${m.role}`}>
+                {m.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img className="chat-image" src={m.image} alt={m.imageName || "uploaded image"} />
+                )}
                 {(m.text || m.streaming) && (
                   <div className={`chat-msg ${m.role} ${m.error ? "error" : ""}`}>
                     {m.text}
@@ -218,6 +303,31 @@ export default function AgentChat({ boardId, isOpen, setIsOpen, onBoardChanged }
           )}
 
           <div className="panel-foot">
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) sendImage(f);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              className="mic-btn"
+              title="Add from image — sticky notes, whiteboard, or a bug screenshot"
+              aria-label="Add from image"
+              disabled={busy || voice.listening}
+              onClick={() => imageInputRef.current?.click()}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <circle cx="12" cy="12" r="3.5" />
+                <path d="M8 5l1-2h6l1 2" />
+              </svg>
+            </button>
             {voice.supported && (
               <button
                 type="button"

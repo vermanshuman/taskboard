@@ -170,6 +170,9 @@ Board agent (needs `OPENAI_API_KEY`):
   when confirmation is needed (more than 3 changes, any delete, a possible duplicate, or a suggested date).
   Tool-calling with create/move/update/delete card + create/rename list; answers questions from full
   board context; bootstraps Todo/In Progress/Done on an empty board; 30 req/min per user.
+- `POST /api/boards/{bid}/agent/vision` — multipart `file` (png/jpeg/webp/gif ≤ 6 MB) + `note` → `plan` (same shape as the
+  chat stream's plan event; never auto-applies). Sticky notes / whiteboard / list → one card per item mapped to existing
+  columns; app screenshot → one bug card (Where/Steps/Expected/Actual, label `bug`).
 - `POST /api/boards/{bid}/agent/confirm` — `{plan_id, skip:[indices]}` applies a pending plan (15-min TTL).
 - Logic lives in `app/agent_actions.py` (tool schema, board context, plan validation, duplicate check via
   fuzzy title ≥0.85 or embedding ≥0.80, executor that logs as "AI · <email>").

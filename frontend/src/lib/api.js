@@ -201,6 +201,9 @@ export const api = {
   // agent: streamed chat (SSE over fetch) + plan confirmation
   agentChat: (boardId, messages, onEvent, signal) =>
     streamEvents(`/api/boards/${boardId}/agent/chat`, { messages }, onEvent, signal),
+  // image (photo of notes / app screenshot) → plan for confirmation
+  agentVision: (boardId, file, note = "") =>
+    request(`/api/boards/${boardId}/agent/vision`, { method: "POST", form: { file, note } }),
   agentConfirm: (boardId, planId, skip = []) =>
     request(`/api/boards/${boardId}/agent/confirm`, { method: "POST", body: { plan_id: planId, skip } }),
 

@@ -20,8 +20,9 @@ A real-time, Trello-style task board. Full-stack portfolio project.
 **AI (needs `OPENAI_API_KEY`)**
 - Board agent: chat that creates, moves, edits, completes and deletes cards, adds columns, and answers questions
   about the board ("what's overdue?", "summarise for standup"). Streams replies, remembers context, flags likely
-  duplicates, and asks before bulk or destructive changes. Hold the mic button to talk instead of typing
-  (Chrome / Edge / Safari)
+  duplicates, and asks before bulk or destructive changes. Click the mic to talk instead of typing
+  (Chrome / Edge / Safari). Drop, paste or pick an image: a photo of sticky notes or a whiteboard becomes
+  cards in the right columns; an app screenshot becomes a structured bug card — always previewed first
 - Semantic search: find cards by meaning using OpenAI embeddings (written in the background on create/update)
 
 **Landing page**

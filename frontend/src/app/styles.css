@@ -937,3 +937,9 @@ h3 {
 .task.stale:hover { opacity: 1; }
 .stale-badge { float: right; margin-left: 8px; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: #fdf0dc; color: #9a6212; letter-spacing: .02em; }
 .task.stale-3 .stale-badge { background: #f5dcb2; }
+
+/* ---- agent: image input ---- */
+.panel.drag-over { outline: 2px dashed var(--accent); outline-offset: -4px; }
+.drop-hint { position: absolute; inset: 48px 0 0 0; background: rgba(85, 70, 225, .08); display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; color: var(--accent); font-weight: 600; font-size: 14px; pointer-events: none; z-index: 2; }
+.chat-image { max-width: 220px; max-height: 160px; border-radius: 10px; border: 1px solid var(--line); object-fit: cover; box-shadow: var(--shadow-sm); }
+.chat-row.user .chat-image { align-self: flex-end; }

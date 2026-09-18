@@ -13,7 +13,9 @@ import uuid
 from collections import defaultdict, deque
 
 import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+import base64
+
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 from openai import OpenAI
 from pydantic import BaseModel, Field
@@ -225,6 +227,107 @@ def agent_chat(
 
     return StreamingResponse(stream(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+# ---- vision: photo of notes → cards, screenshot → bug card --------------------
+
+VISION_MAX_BYTES = 6 * 1024 * 1024
+VISION_TOOLS = [t for t in TOOLS if t["function"]["name"] == "create_card"]
+VISION_TYPES = {"image/png", "image/jpeg", "image/webp", "image/gif"}
+
+VISION_PROMPT = """You are the planning assistant for one Stack Board kanban board. The user has uploaded an
+image. Look at it carefully and turn it into board changes using the tools. The board (lists with ids,
+existing cards, labels) is in the context message.
+
+Decide what kind of image it is:
+
+A) A whiteboard, sticky notes, a handwritten or printed to-do list, a planning doc, a photo of a board:
+   → one create_card per distinct task you can read. Keep the wording close to what is written, fixed
+   into a short imperative title. If the notes are grouped under headings, map each heading to the
+   closest EXISTING list (e.g. "Doing" → "In Progress", "Finished" → "Done"); if nothing matches, use
+   the first list. Skip anything that is clearly not a task (titles, dates, decorations). Do NOT invent
+   tasks that aren't in the image.
+
+B) An application screenshot, error dialog, stack trace, or UI with something circled/highlighted:
+   → exactly ONE create_card describing the bug. Title: short and specific ("Checkout button overlaps
+   footer on mobile"). Description in this shape:
+   "Where: <screen/page seen>
+    Steps: <what the user likely did, from what is visible>
+    Expected: <…>
+    Actual: <what the screenshot shows — quote visible error text exactly>"
+   Labels: "bug" (plus an existing board label if one obviously fits). Put it in the first list unless
+   the user's note says otherwise.
+
+If the image contains no usable tasks or bug, make no tool calls and explain briefly what you saw.
+Dates: copy any due phrase EXACTLY as written into `due` and REMOVE it from the title
+("Migrate logs by Friday" → title "Migrate logs", due "Friday"); never compute dates yourself.
+The user may have added a note with instructions — follow it.
+"""
+
+
+@router.post("/vision")
+def agent_vision(
+    board_id: int,
+    file: UploadFile = File(...),
+    note: str = Form(""),
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """Image → proposed plan. Always returns a plan for confirmation (never
+    applies directly) because it's a best-effort read of a picture.
+    Response has the same shape as the chat stream's "plan" event."""
+    board = require_board_access(board_id, db, user)
+    if not settings.openai_api_key:
+        raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED,
+                            detail="OpenAI API key is missing. Add OPENAI_API_KEY to your environment.")
+    _check_rate_limit(user.id)
+    if file.content_type not in VISION_TYPES:
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Please upload a PNG, JPEG, WebP or GIF image.")
+    data = file.file.read(VISION_MAX_BYTES + 1)
+    if len(data) > VISION_MAX_BYTES:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Image too large (max 6 MB).")
+    _bootstrap_empty_board(board, db)
+
+    data_url = f"data:{file.content_type};base64,{base64.b64encode(data).decode()}"
+    user_content = [
+        {"type": "image_url", "image_url": {"url": data_url, "detail": "auto"}},
+        {"type": "text", "text": note.strip() or "Turn this image into board changes."},
+    ]
+    messages = [
+        {"role": "system", "content": VISION_PROMPT},
+        {"role": "system", "content": board_context(board, db)},
+        {"role": "user", "content": user_content},
+    ]
+    try:
+        client = OpenAI(api_key=settings.openai_api_key, http_client=httpx.Client(timeout=90))
+        completion = client.chat.completions.create(
+            model=MODEL, messages=messages, tools=VISION_TOOLS, tool_choice="auto", temperature=0.2,
+        )
+    except Exception as exc:
+        print(f"[agent/vision] {exc.__class__.__name__}: {exc}")
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail="Couldn't reach the AI model. Please try again.")
+
+    msg = completion.choices[0].message
+    reply = (msg.content or "").strip()
+    tool_calls = []
+    for tc in msg.tool_calls or []:
+        try:
+            tool_calls.append((tc.function.name, json.loads(tc.function.arguments or "{}")))
+        except json.JSONDecodeError:
+            continue
+
+    if not tool_calls:
+        return {"type": "done", "reply": reply or "I couldn't find any tasks or a bug in that image.", "applied": []}
+
+    plan = build_plan(tool_calls, board)
+    plan_id = uuid.uuid4().hex
+    _pending[plan_id] = {"board_id": board_id, "user_id": user.id, "plan": plan,
+                         "prompt": f"[image] {note.strip()}".strip(), "created": time.time()}
+    _prune_pending()
+    live = [p for p in plan if not p.error]
+    intro = reply or f"I read {len(live)} item{'s' if len(live) != 1 else ''} from the image. Review before I add them:"
+    return {"type": "plan", "plan_id": plan_id, "reply": intro,
+            "actions": [p.to_public(i) for i, p in enumerate(plan)]}
 
 
 @router.post("/confirm")
