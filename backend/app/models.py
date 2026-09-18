@@ -87,6 +87,11 @@ class List(Base):
         order_by="Card.position",
     )
 
+    @property
+    def is_done(self) -> bool:
+        from .domain import is_done_list  # local import: domain imports nothing from models
+        return is_done_list(self.name)
+
 
 class Card(Base):
     __tablename__ = "cards"
@@ -101,6 +106,9 @@ class Card(Base):
     attachment_name = Column(String(255), nullable=True)  # original filename for display/download
     completed = Column(Integer, default=0)  # 0/1; used by the stats view
     completed_at = Column(DateTime, nullable=True)  # set when completed flips to 1; drives stats
+    # Last *meaningful* touch (edit, move, attachment) -- NOT bumped when a
+    # sibling is renumbered. Drives the "stale card" ageing in the UI.
+    updated_at = Column(DateTime, nullable=True)
     reminder_sent = Column(Integer, default=0)  # 0/1; used by the reminder job
     list_id = Column(Integer, ForeignKey("lists.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

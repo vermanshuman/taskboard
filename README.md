@@ -14,12 +14,14 @@ A real-time, Trello-style task board. Full-stack portfolio project.
 - Board sharing: owner invites registered users by email; members can leave
 - Live sync over WebSockets — every change appears in other open sessions instantly
 - Live presence (who else is viewing), reminder toasts for cards due within 24h, due-date colour coding
+- Card ageing: cards nobody has touched for 7 / 14 / 30 days fade and yellow like an old sticky note, with a badge
 - Activity feed with paging; project-health metrics (cards per column, completed per week)
 
 **AI (needs `OPENAI_API_KEY`)**
 - Board agent: chat that creates, moves, edits, completes and deletes cards, adds columns, and answers questions
   about the board ("what's overdue?", "summarise for standup"). Streams replies, remembers context, flags likely
-  duplicates, and asks before bulk or destructive changes
+  duplicates, and asks before bulk or destructive changes. Hold the mic button to talk instead of typing
+  (Chrome / Edge / Safari)
 - Semantic search: find cards by meaning using OpenAI embeddings (written in the background on create/update)
 
 **Landing page**

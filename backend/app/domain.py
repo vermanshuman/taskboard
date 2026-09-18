@@ -17,6 +17,11 @@ def is_done_list(name: str | None) -> bool:
     return cleaned in DONE_LIST_NAMES
 
 
+def touch(card) -> None:
+    """Record a meaningful change to a card (for ageing / stale markers)."""
+    card.updated_at = datetime.utcnow()
+
+
 def set_completed(card, completed: bool) -> None:
     """Flip completion and keep completed_at in sync."""
     was = bool(card.completed)

@@ -915,3 +915,25 @@ h3 {
 .plan-flag.danger { background: #fbe3e7; color: var(--danger); }
 .plan-flag.warn { background: #fdf0dc; color: #9a6212; }
 .plan-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+
+/* ---- hold-to-talk mic ---- */
+.mic-btn { flex: 0 0 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; touch-action: none; user-select: none; transition: background .15s, color .15s, box-shadow .15s; }
+.mic-btn:hover { background: var(--surface); color: var(--ink); }
+.mic-btn:disabled { opacity: .5; cursor: default; }
+.mic-btn.listening { background: var(--danger); border-color: var(--danger); color: #fff; animation: micPulse 1.2s ease-out infinite; }
+@keyframes micPulse { 0% { box-shadow: 0 0 0 0 rgba(209, 67, 91, .45); } 100% { box-shadow: 0 0 0 12px rgba(209, 67, 91, 0); } }
+
+/* ---- card ageing: untouched cards fade and yellow like an old sticky note ---- */
+.task.stale { position: relative; transition: opacity .2s, background-color .2s; }
+.task.stale-1 { background: #fffdf5; }
+.task.stale-2 { background: #fff9e6; opacity: .88; }
+.task.stale-3 { background: #fdf3d6; opacity: .72; }
+.task.stale-2::after, .task.stale-3::after {
+  content: ""; position: absolute; right: 0; bottom: 0; width: 16px; height: 16px;
+  border-radius: var(--radius-sm) 0 var(--radius-sm) 0;
+  background: linear-gradient(135deg, transparent 50%, rgba(154, 98, 18, .18) 50%);
+  pointer-events: none;
+}
+.task.stale:hover { opacity: 1; }
+.stale-badge { float: right; margin-left: 8px; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: #fdf0dc; color: #9a6212; letter-spacing: .02em; }
+.task.stale-3 .stale-badge { background: #f5dcb2; }

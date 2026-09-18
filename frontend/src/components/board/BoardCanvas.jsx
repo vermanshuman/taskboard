@@ -4,6 +4,25 @@ import { useEffect, useRef, useState } from "react";
 
 const SPINES = ["var(--spine-1)", "var(--spine-2)", "var(--spine-3)", "var(--spine-4)", "var(--spine-5)"];
 
+// Card ageing: how long since the last meaningful touch (edit, move,
+// attachment). Finished cards never age. Thresholds are days.
+const AGE_LEVELS = [
+  { days: 30, level: 3 },
+  { days: 14, level: 2 },
+  { days: 7, level: 1 },
+];
+
+function ageInfo(card, inDoneList) {
+  if (card.completed || inDoneList) return null;
+  const last = card.updated_at || card.created_at;
+  if (!last) return null;
+  const stamp = new Date(last.endsWith("Z") ? last : last + "Z"); // API times are UTC
+  const days = Math.floor((Date.now() - stamp) / 864e5);
+  const hit = AGE_LEVELS.find((l) => days >= l.days);
+  if (!hit) return null;
+  return { days, level: hit.level, label: days >= 60 ? `${Math.floor(days / 30)}mo` : `${days}d` };
+}
+
 export default function BoardCanvas({
   board,
   newCard,
@@ -136,12 +155,14 @@ function Column({
       <div className="column-cards">
         {list.cards.map((c, idx) => {
           const due = dueInfo(c.due_date);
+          const age = ageInfo(c, list.is_done);
           const tagList = c.labels ? c.labels.split(",").map((t) => t.trim()).filter(Boolean) : [];
           return (
             <div key={c.id}>
               {dropIndex === idx && <div className="drop-indicator" />}
               <article
-                className={`task task-draggable ${drag.draggingId === c.id ? "dragging" : ""}`}
+                className={`task task-draggable ${drag.draggingId === c.id ? "dragging" : ""} ${age ? `stale stale-${age.level}` : ""}`}
+                title={age ? `Untouched for ${age.days} days` : undefined}
                 id={`card-${c.id}`}
                 data-card-id={c.id}
                 draggable
@@ -149,7 +170,14 @@ function Column({
                 onDragEnd={drag.onDragEnd}
                 onClick={() => openDetailsModal(c)}
               >
-                <div className="task-title">{c.title}</div>
+                <div className="task-title">
+                  {c.title}
+                  {age && (
+                    <span className="stale-badge" aria-label={`Untouched for ${age.days} days`}>
+                      {age.label}
+                    </span>
+                  )}
+                </div>
                 {tagList.length > 0 && (
                   <div className="task-tags">
                     {tagList.map((tag) => (

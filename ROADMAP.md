@@ -32,11 +32,28 @@ Not doing: Frame.io / YouTube / Tipalti integrations (they keep those; mocks pro
 | 12 | Log every agent action to the activity feed with the prompt | ✅ logged as "AI · <email>" + an "asked: …" line |
 | 13 | **Undo** — "undo that" reverses the last agent action set (needs the action log from #12; store an inverse per applied action) | todo |
 
+## D. Unique / differentiating features (suggested 2026-09-17, not yet built)
+
+Ranked by impact per day of work. Top picks for a freelance demo: D1, D7, D2.
+
+| # | Feature | Notes | Effort |
+|---|---------|-------|--------|
+| D1 | **Voice-driven board** ✅ | Hold-to-talk mic in the board agent (`lib/useVoiceInput.js`) → Web Speech API → same `/agent/chat` endpoint. Chrome/Edge/Safari; button hidden where unsupported (Firefox). | done 2026-09-17 |
+| D2 | **Visible card ageing** ✅ | `Card.updated_at` set by `domain.touch()` on edit/move/attachment (not on sibling renumbering). UI: 7/14/30-day levels fade + yellow with an "Nd" badge and tooltip; finished cards and done-column cards never age; agent context shows "untouched Nd (stale)". | done 2026-09-18 |
+| D3 | **Standup mode** | Guided 3-min meeting: each member's done / doing / blocked in turn, timer, agent writes the summary to the activity log. | 1 day |
+| D4 | **"Explain this board"** | First open of a shared board → 5-line agent briefing (purpose, what's hot, overdue, most active). Zero new backend. | 2 h |
+| D5 | **Time-travel slider** | Scrub to see the board as it was yesterday / last week, rebuilt from the activity log. Requires log entries to carry structured data (entity, before/after), not just text. | 1 day |
+| D6 | **Smart split** | Drop a big card → agent proposes sub-cards with ordering/dependencies as a preview → one click creates. Extends the plan/confirm flow. | ½ day |
+| D7 | **Paste-in intake** | Paste an email / meeting notes / Slack thread → agent extracts action items into cards with owners and dates. Same tool-calling, new prompt + UI box. | ½ day |
+| D8 | **Live cursors** | Figma-style pointers of other viewers with names. Presence + WebSockets exist; add a throttled `cursor` event. | ½ day |
+| D9 | **Board health score** | 0–100 per board tile from overdue ratio, stale cards, WIP per column, load balance; click to see why. | ½ day |
+| D10 | **Focus view** | Ctrl-K → "focus": only your cards due this week, sorted by urgency, with a pomodoro timer. Depends on the command palette (C) and assignees (A2). | ½ day |
+
 ## C. Earlier "next steps" still open
 
 - Deploy live (Vercel + Render/Railway, Postgres, `FRONTEND_URL` / `CORS_ORIGINS` / `JWT_SECRET`).
 - Optimistic drag-and-drop (move locally before the API confirms).
 - pgvector once on Postgres.
-- Command palette (Ctrl-K); card aging / "stale" marker.
+- Command palette (Ctrl-K).
 - Refresh tokens; httpOnly auth cookie set by the backend; per-event frontend patches instead of refetch; automated tests in the repo.
 - Commit the current work (everything since the Vite → Next.js migration is uncommitted as of 2026-09-12).

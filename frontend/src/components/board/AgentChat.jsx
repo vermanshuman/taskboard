@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api.js";
+import { useVoiceInput } from "@/lib/useVoiceInput.js";
 
 const GREETING = {
   role: "assistant",
@@ -25,6 +26,25 @@ export default function AgentChat({ boardId, isOpen, setIsOpen, onBoardChanged }
   const [busy, setBusy] = useState(false);
   const endRef = useRef(null);
   const abortRef = useRef(null);
+  const sendRef = useRef(null);
+
+  // Click-to-talk: interim words show in the input; when you pause, the final text is sent.
+  const voice = useVoiceInput({
+    onTranscript: (t) => setInput(t),
+    onFinal: (t) => sendRef.current?.(t),
+    onError: (code) =>
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          error: true,
+          text:
+            code === "not-allowed" || code === "service-not-allowed"
+              ? "Microphone access was blocked. Allow it in the browser's site settings to talk to the agent."
+              : "Voice input failed — try again or type instead.",
+        },
+      ]),
+  });
 
   useEffect(() => {
     if (isOpen) endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -92,6 +112,10 @@ export default function AgentChat({ boardId, isOpen, setIsOpen, onBoardChanged }
       if (touchedBoard) onBoardChanged();
     }
   }
+
+  useEffect(() => {
+    sendRef.current = send;
+  });
 
   function toggleSkip(msgIndex, actionIndex) {
     setMessages((m) =>
@@ -194,16 +218,32 @@ export default function AgentChat({ boardId, isOpen, setIsOpen, onBoardChanged }
           )}
 
           <div className="panel-foot">
+            {voice.supported && (
+              <button
+                type="button"
+                className={`mic-btn ${voice.listening ? "listening" : ""}`}
+                title={voice.listening ? "Listening… click to stop" : "Click and speak"}
+                aria-label={voice.listening ? "Listening — click to stop" : "Click and speak"}
+                aria-pressed={voice.listening}
+                disabled={busy}
+                onClick={() => (voice.listening ? voice.stop() : voice.start())}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="9" y="2" width="6" height="12" rx="3" />
+                  <path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8" />
+                </svg>
+              </button>
+            )}
             <input
               className="input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder="Ask or instruct…"
-              disabled={busy}
+              placeholder={voice.listening ? "Listening… speak, then pause" : "Ask or instruct…"}
+              disabled={busy || voice.listening}
               maxLength={2000}
             />
-            <button className="btn btn-primary" onClick={() => send()} disabled={busy || !input.trim()}>
+            <button className="btn btn-primary" onClick={() => send()} disabled={busy || voice.listening || !input.trim()}>
               Send
             </button>
           </div>

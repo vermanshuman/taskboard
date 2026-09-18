@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from . import models
 from .config import settings
-from .domain import is_done_list, resolve_due_phrase, set_completed
+from .domain import is_done_list, resolve_due_phrase, set_completed, touch
 from .embeddings import embed_text, rank_by_similarity
 from .websockets import notify
 
@@ -154,6 +154,12 @@ def board_context(board: models.Board, db: Session) -> str:
                 bits.append(f"due={d.isoformat()}{' ' + status if status else ''}")
             if finished:
                 bits.append("completed")
+            else:
+                last = c.updated_at or c.created_at
+                if last:
+                    idle = (datetime.datetime.utcnow() - last).days
+                    if idle >= 7:
+                        bits.append(f"untouched {idle}d (stale)")
             if c.description:
                 bits.append(f"desc=\"{c.description[:80]}\"")
             lines.append(" ".join(bits))
@@ -359,6 +365,7 @@ def apply_plan(
                 position=(max_pos or 0) + 1,
             )
             set_completed(card, is_done_list(lst.name))
+            touch(card)
             db.add(card)
             db.flush()
             cards[card.id] = card
@@ -383,6 +390,7 @@ def apply_plan(
                 for i, c in enumerate(source_cards, start=1):
                     c.position = i
             set_completed(card, is_done_list(target.name))
+            touch(card)
             db.flush()
             db.expire(source, ["cards"])
             db.expire(target, ["cards"])
@@ -416,6 +424,7 @@ def apply_plan(
                 changed.append("completion")
             if "title" in changed or "description" in changed:
                 embed_later.append(card.id)
+            touch(card)
             log(f"updated {', '.join(changed)} on card '{card.title}'")
             results.append(f"Updated \"{card.title}\" ({', '.join(changed)})")
             notify(board.id, {"type": "card_updated", "card_id": card.id, "refresh_logs": True})

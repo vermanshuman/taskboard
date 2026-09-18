@@ -11,7 +11,7 @@ from .. import models, schemas
 from ..config import settings
 from ..database import get_db
 from ..deps import get_current_user, require_board_access
-from ..domain import is_done_list, set_completed
+from ..domain import is_done_list, set_completed, touch
 from ..embeddings import embed_card_in_background
 from ..websockets import notify
 
@@ -61,6 +61,7 @@ def create_card(
         position=(max_pos or 0) + 1,
     )
     set_completed(card, is_done_list(lst.name))
+    touch(card)
     db.add(card)
     db.add(
         models.ActivityLog(
@@ -94,6 +95,7 @@ def update_card(
         set_completed(card, bool(data.pop("completed")))
     for field, value in data.items():
         setattr(card, field, value)
+    touch(card)
 
     db.add(
         models.ActivityLog(
@@ -145,6 +147,7 @@ def move_card(
     # Completion follows the destination column: dropping into a "done"-style
     # column completes the card, dragging it back out re-opens it.
     set_completed(card, is_done_list(target.name))
+    touch(card)
 
     db.add(
         models.ActivityLog(
@@ -202,6 +205,7 @@ def upload_attachment(
 
     card.attachment_path = path
     card.attachment_name = _safe_filename(file.filename)
+    touch(card)
     db.add(
         models.ActivityLog(
             board_id=board_id,
@@ -250,6 +254,7 @@ def delete_attachment(
             pass
     card.attachment_path = None
     card.attachment_name = None
+    touch(card)
     db.commit()
     db.refresh(card)
     notify(board_id, {"type": "card_updated", "card_id": card.id, "refresh_logs": True})

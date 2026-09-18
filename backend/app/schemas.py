@@ -59,6 +59,8 @@ class CardOut(BaseModel):
     attachment_name: str | None
     completed: int
     completed_at: datetime | None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
     list_id: int
 
 
@@ -78,6 +80,7 @@ class ListOut(BaseModel):
     name: str
     position: int
     board_id: int
+    is_done: bool = False  # name matches a "done" synonym; cards here count as finished
     cards: list[CardOut] = []
 
 
