@@ -991,3 +991,17 @@ h3 {
 .sp-error p { color: var(--muted); }
 .sp-foot { max-width: 760px; margin: 18px auto 0; text-align: center; color: var(--muted); font-size: 12px; }
 @media (max-width: 640px) { .sp-card { padding: 24px 20px; } .sp-grid { grid-template-columns: 1fr; } }
+
+/* ---- "since you were here" ---- */
+.since-banner { margin: 0 28px 10px; padding: 12px 14px; background: var(--accent-soft); border: 1px solid rgba(85, 70, 225, .25); border-radius: var(--radius-sm); display: flex; align-items: flex-start; gap: 12px; animation: fadeIn .25s ease; }
+.since-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin-top: 5px; flex-shrink: 0; box-shadow: 0 0 0 4px rgba(85, 70, 225, .18); }
+.since-body { flex: 1; font-size: 14px; color: var(--ink); line-height: 1.5; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: baseline; }
+.since-when { color: var(--muted); font-size: 12px; }
+.since-text { flex-basis: 100%; }
+.since-count { font-size: 11px; font-weight: 700; color: var(--accent); }
+.task.changed { animation: cardGlow 9s ease-out forwards; }
+@keyframes cardGlow {
+  0%   { box-shadow: 0 0 0 3px var(--accent), 0 8px 24px rgba(85, 70, 225, .35); }
+  70%  { box-shadow: 0 0 0 3px rgba(85, 70, 225, .5), 0 4px 12px rgba(85, 70, 225, .15); }
+  100% { box-shadow: var(--shadow-sm); }
+}

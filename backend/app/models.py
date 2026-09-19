@@ -71,6 +71,9 @@ class BoardMembership(Base):
     board_id = Column(Integer, ForeignKey("boards.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     role = Column(String(20), nullable=False, default="member")
+    # When this member last left the board (socket closed). Baseline for
+    # "what changed since you were here".
+    last_seen_at = Column(DateTime, nullable=True)
 
     board = relationship("Board", back_populates="memberships")
     user = relationship("User", back_populates="memberships")

@@ -140,6 +140,7 @@ export const api = {
   getBoard: (id) => request(`/api/boards/${id}`),
   deleteBoard: (id) => request(`/api/boards/${id}`, { method: "DELETE" }),
 
+  getSince: (boardId) => request(`/api/boards/${boardId}/since`),
   getActivity: (boardId, beforeId, limit = 30) =>
     request(
       `/api/boards/${boardId}/activity?limit=${limit}${beforeId ? `&before_id=${beforeId}` : ""}`

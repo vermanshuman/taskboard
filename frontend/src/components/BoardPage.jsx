@@ -56,6 +56,10 @@ export default function BoardPage({ id }) {
   const [attachmentBusy, setAttachmentBusy] = useState(false);
   const [attachmentError, setAttachmentError] = useState("");
 
+  // "since you were here": banner + glowing cards, fetched once per visit
+  const [since, setSince] = useState(null);
+  const [changedIds, setChangedIds] = useState(() => new Set());
+
   // drag state: which card, which list is hovered, and where in it
   const [dragState, setDragState] = useState({ draggingId: null, targetListId: null, dropIndex: null });
 
@@ -116,6 +120,16 @@ export default function BoardPage({ id }) {
         if (me?.avatar_color) setUserProfileColor(me.avatar_color);
         if (me?.full_name) setUserDisplayName(me.full_name);
         if (me?.id) setMyUserId(me.id);
+      })
+      .catch(() => {});
+
+    api
+      .getSince(id)
+      .then((s) => {
+        if (s.first_visit || s.count === 0) return;
+        setSince(s);
+        setChangedIds(new Set(s.changed_card_ids));
+        setTimeout(() => setChangedIds(new Set()), 9000); // glow fades after a while
       })
       .catch(() => {});
 
@@ -387,6 +401,19 @@ export default function BoardPage({ id }) {
         </div>
       </div>
 
+      {since && (
+        <div className="since-banner" role="status">
+          <span className="since-dot" />
+          <div className="since-body">
+            <strong>Since you were here</strong>
+            <span className="since-when">({formatSince(since.since)})</span>
+            <span className="since-text">{since.narration}</span>
+            <span className="since-count">{since.count} change{since.count === 1 ? "" : "s"}</span>
+          </div>
+          <button className="icon-btn" aria-label="Dismiss" onClick={() => setSince(null)}>✕</button>
+        </div>
+      )}
+
       <BoardStats isOpen={isStatsOpen} stats={statsData} totalCards={totalCardsCount} />
 
       <BoardCanvas
@@ -394,6 +421,7 @@ export default function BoardPage({ id }) {
         newCard={newCard}
         setNewCard={setNewCard}
         drag={drag}
+        changedIds={changedIds}
         openDetailsModal={openDetailsModal}
         dueInfo={dueInfo}
         addCard={addCard}
@@ -462,6 +490,14 @@ export default function BoardPage({ id }) {
       )}
     </div>
   );
+}
+
+function formatSince(iso) {
+  const d = new Date(iso.endsWith("Z") ? iso : iso + "Z");
+  const diffH = (Date.now() - d) / 36e5;
+  if (diffH < 1) return "a few minutes ago";
+  if (diffH < 24) return `${Math.floor(diffH)}h ago`;
+  return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
 
 /**

@@ -55,7 +55,7 @@ Ranked by impact per day of work. Top picks for a freelance demo: D1, D7, D2.
 |---|---------|-------|--------|
 | E1 | **Photo → board** ✅ | Photo of sticky notes / whiteboard / printed list → one card per item, headings mapped to existing columns, date phrases moved into `due`. `POST /agent/vision` (gpt-4o-mini vision, `create_card` tool only) → always a confirm plan. UI: camera button, paste (Ctrl+V) or drop an image into the agent panel; optional note in the input goes along as instructions. | done 2026-09-18 |
 | E2 | **Screenshot → bug card** ✅ | Same endpoint; an app screenshot / error / circled UI becomes ONE card with Where / Steps / Expected / Actual, label `bug`, exact error text quoted. | done 2026-09-18 |
-| E3 | "What changed since you were here" | Agent narrates the diff since your last visit; changed cards glow. Needs `last_seen_at` per member. | todo |
+| E3 | **"What changed since you were here"** ✅ | `BoardMembership.last_seen_at` stamped when the member's last board socket closes (leaving, not loading). `GET /boards/{id}/since` → changed card ids (by `updated_at`), activity entries, and a one-line narration (model for ≥4 entries with exact-count rules, deterministic below). UI: dismissible banner on the board + changed cards glow for 9s. First visit only sets the baseline. `app/since.py`. | done 2026-09-19 |
 | E4 | Ask a card "why are you stuck?" | Per-card agent thread with that card's history + related cards via embeddings. | todo |
 | E5 | Natural-language filter | "overdue bugs nobody touched in 2 weeks" → live board filter. | todo |
 | E6 | Risk radar | Predictive ⚠ on cards likely to slip (vague title, no owner, near due, idle, similar cards slipped before). | todo |

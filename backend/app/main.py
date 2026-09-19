@@ -10,6 +10,7 @@ from .database import SessionLocal, ensure_schema
 from .deps import get_current_user
 from .routers import auth, boards, cards, lists, stats, agent, search, public_agent
 from .security import decode_token
+from .since import mark_seen
 from .tasks import reminder_loop
 from .websockets import manager, set_loop
 
@@ -110,3 +111,11 @@ async def board_ws(websocket: WebSocket, board_id: int):
     finally:
         await manager.disconnect(board_id, websocket)
         await manager.broadcast_presence(board_id)
+        # Only when the member's LAST tab closes: otherwise a second tab would
+        # move the baseline while they're still looking at the board.
+        if email not in await manager.viewers(board_id):
+            db = SessionLocal()
+            try:
+                mark_seen(board_id, user_id, db)
+            finally:
+                db.close()

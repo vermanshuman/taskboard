@@ -145,6 +145,11 @@ Boards:
 - `GET /api/boards/{id}/activity?limit=&before_id=` — keyset-paginated history `{items, next_before_id}`
 - `DELETE /api/boards/{id}` — owner only
 
+Since you were here:
+- `GET /api/boards/{bid}/since` → `{since, first_visit, changed_card_ids, entries[{id, when, who, text}], narration, count}`.
+  Baseline = `BoardMembership.last_seen_at`, set when the member's last board socket closes (main.py) — not by this
+  call (first visit excepted). Changed cards = `updated_at`/`created_at` after the baseline. `app/since.py`.
+
 Client status page:
 - `POST /api/boards/{bid}/status-link` (owner) → `{token, generated_at}`; idempotent. `POST …/status-link/refresh` regenerates;
   `DELETE …/status-link` revokes. `BoardDetail.status_token` is visible to members.

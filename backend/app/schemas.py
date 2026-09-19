@@ -154,6 +154,22 @@ class StatusPage(BaseModel):
     recent: list[StatusActivity] = []
 
 
+class SinceEntry(BaseModel):
+    id: int
+    when: datetime
+    who: str
+    text: str
+
+
+class SinceResponse(BaseModel):
+    since: datetime | None
+    first_visit: bool
+    changed_card_ids: list[int] = []
+    entries: list[SinceEntry] = []
+    narration: str = ""
+    count: int = 0
+
+
 class ActivityPage(BaseModel):
     items: list[ActivityLogOut]
     next_before_id: int | None  # pass as ?before_id= to get the next (older) page; null = end

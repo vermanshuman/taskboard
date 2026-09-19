@@ -28,6 +28,7 @@ export default function BoardCanvas({
   newCard,
   setNewCard,
   drag,
+  changedIds,
   openDetailsModal,
   dueInfo,
   addCard,
@@ -50,6 +51,7 @@ export default function BoardCanvas({
           list={lst}
           spine={SPINES[i % SPINES.length]}
           drag={drag}
+          changedIds={changedIds}
           newCardTitle={newCard[lst.id] || ""}
           setNewCardTitle={(v) => setNewCard({ ...newCard, [lst.id]: v })}
           addCard={() => addCard(lst.id)}
@@ -69,6 +71,7 @@ function Column({
   list,
   spine,
   drag,
+  changedIds,
   newCardTitle,
   setNewCardTitle,
   addCard,
@@ -161,7 +164,7 @@ function Column({
             <div key={c.id}>
               {dropIndex === idx && <div className="drop-indicator" />}
               <article
-                className={`task task-draggable ${drag.draggingId === c.id ? "dragging" : ""} ${age ? `stale stale-${age.level}` : ""}`}
+                className={`task task-draggable ${drag.draggingId === c.id ? "dragging" : ""} ${age ? `stale stale-${age.level}` : ""} ${changedIds?.has(c.id) ? "changed" : ""}`}
                 title={age ? `Untouched for ${age.days} days` : undefined}
                 id={`card-${c.id}`}
                 data-card-id={c.id}

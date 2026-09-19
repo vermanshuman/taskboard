@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..database import get_db
 from ..deps import get_current_user, require_board_access
+from ..since import changes_since
 from ..status_report import ensure_narrative
 from ..websockets import notify
 
@@ -95,6 +96,19 @@ def get_board(
     board = require_board_access(board_id, db, user)
     membership = next(m for m in board.memberships if m.user_id == user.id)
     return _board_detail(board, membership.role, db)
+
+
+@router.get("/{board_id}/since", response_model=schemas.SinceResponse)
+def board_since(
+    board_id: int,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """What changed since this member last left the board. Does not move the
+    baseline — that happens when their board socket closes."""
+    board = require_board_access(board_id, db, user)
+    membership = next(m for m in board.memberships if m.user_id == user.id)
+    return changes_since(board, membership, db)
 
 
 @router.get("/{board_id}/activity", response_model=schemas.ActivityPage)
