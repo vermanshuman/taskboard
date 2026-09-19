@@ -15,6 +15,8 @@ A real-time, Trello-style task board. Full-stack portfolio project.
 - Live sync over WebSockets — every change appears in other open sessions instantly
 - Live presence (who else is viewing), reminder toasts for cards due within 24h, due-date colour coding
 - Card ageing: cards nobody has touched for 7 / 14 / 30 days fade and yellow like an old sticky note, with a badge
+- Client status page: a read-only link per board (no sign-in) with progress, an AI-written summary of what shipped /
+  what's next / what's at risk, and recent activity — nothing sensitive leaves the board
 - Activity feed with paging; project-health metrics (cards per column, completed per week)
 
 **AI (needs `OPENAI_API_KEY`)**

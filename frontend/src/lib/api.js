@@ -145,6 +145,12 @@ export const api = {
       `/api/boards/${boardId}/activity?limit=${limit}${beforeId ? `&before_id=${beforeId}` : ""}`
     ),
 
+  // client status page
+  enableStatusLink: (boardId) => request(`/api/boards/${boardId}/status-link`, { method: "POST" }),
+  refreshStatusLink: (boardId) => request(`/api/boards/${boardId}/status-link/refresh`, { method: "POST" }),
+  revokeStatusLink: (boardId) => request(`/api/boards/${boardId}/status-link`, { method: "DELETE" }),
+  getPublicStatus: (token) => request(`/api/public/status/${encodeURIComponent(token)}`),
+
   // members (sharing)
   listMembers: (boardId) => request(`/api/boards/${boardId}/members`),
   addMember: (boardId, email) =>

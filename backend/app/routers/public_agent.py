@@ -5,18 +5,24 @@ planning agent would split a request into cards -- as a preview only. It has
 no access to boards or users, and is rate-limited per IP because it's open.
 """
 import json
+import re
 import time
 from collections import defaultdict, deque
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from openai import OpenAI
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
+from .. import models
 from ..config import settings
+from ..database import get_db
 from ..domain import resolve_due_phrase
+from ..schemas import StatusActivity, StatusNarrative, StatusPage
+from ..status_report import compute_stats, ensure_narrative
 
-router = APIRouter(prefix="/api/public/assistant", tags=["public"])
+router = APIRouter(prefix="/api/public", tags=["public"])
 
 RATE_LIMIT = 20  # requests
 RATE_WINDOW = 60  # seconds
@@ -149,7 +155,50 @@ def _check_rate_limit(ip: str) -> None:
     q.append(now)
 
 
-@router.post("", response_model=AssistantResponse)
+@router.get("/status/{token}", response_model=StatusPage)
+def public_status(token: str, request: Request, db: Session = Depends(get_db)):
+    """Read-only client status page. Card titles only — no descriptions,
+    attachments or emails leave the board."""
+    ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
+        request.client.host if request.client else "unknown"
+    )
+    _check_rate_limit(ip)
+    board = db.query(models.Board).filter_by(status_token=token).first()
+    if board is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This status page doesn't exist or was turned off.")
+    narrative = ensure_narrative(board, db)
+    recent = (
+        db.query(models.ActivityLog)
+        .filter_by(board_id=board.id)
+        .order_by(models.ActivityLog.id.desc())
+        .limit(10)
+        .all()
+    )
+    return StatusPage(
+        board_name=board.name,
+        generated_at=board.status_generated_at,
+        narrative=StatusNarrative(**narrative),
+        stats=compute_stats(board),
+        recent=[StatusActivity(when=l.created_at, who=_display_name(l.user_email), text=_scrub_emails(l.action_text))
+                for l in recent],
+    )
+
+
+_EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+
+
+def _display_name(user_email: str) -> str:
+    if user_email.startswith("AI"):
+        return "Assistant"
+    return user_email.split("@")[0].replace(".", " ").title()
+
+
+def _scrub_emails(text: str) -> str:
+    """Activity lines can mention people by email (sharing); show names only."""
+    return _EMAIL.sub(lambda m: _display_name(m.group(0)), text)
+
+
+@router.post("/assistant", response_model=AssistantResponse)
 def public_assistant(payload: AssistantRequest, request: Request):
     ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
         request.client.host if request.client else "unknown"

@@ -145,6 +145,14 @@ Boards:
 - `GET /api/boards/{id}/activity?limit=&before_id=` — keyset-paginated history `{items, next_before_id}`
 - `DELETE /api/boards/{id}` — owner only
 
+Client status page:
+- `POST /api/boards/{bid}/status-link` (owner) → `{token, generated_at}`; idempotent. `POST …/status-link/refresh` regenerates;
+  `DELETE …/status-link` revokes. `BoardDetail.status_token` is visible to members.
+- `GET /api/public/status/{token}` — no auth, rate-limited per IP → `{board_name, generated_at, narrative{summary, shipped,
+  in_progress, next, risks}, stats{total, done, open, overdue, due_soon, stale, percent, per_list, shipped_last_7_days}, recent}`.
+  Titles only; emails scrubbed from activity lines. Narrative cached on the board, regenerated when the board changed
+  (10-min throttle) or on refresh; `app/status_report.py`.
+
 Members (sharing):
 - `GET /api/boards/{bid}/members` — `[{user_id, email, full_name, avatar_color, role}]`
 - `POST /api/boards/{bid}/members` — `{email}`; owner only; 404 unknown email, 409 already a member

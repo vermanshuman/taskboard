@@ -14,7 +14,7 @@ const PUBLIC_PATHS = ["/", "/login"];
 export function proxy(request) {
   const { pathname, searchParams } = request.nextUrl;
   const hasToken = Boolean(request.cookies.get("sb_token")?.value);
-  const isPublic = PUBLIC_PATHS.includes(pathname);
+  const isPublic = PUBLIC_PATHS.includes(pathname) || pathname.startsWith("/status/");
 
   if (!hasToken && !isPublic) {
     const url = request.nextUrl.clone();
@@ -25,7 +25,8 @@ export function proxy(request) {
   }
 
   // Signed in and on the landing page (not an OAuth callback) → the app.
-  if (hasToken && isPublic && !searchParams.has("token")) {
+  // (Status pages are public for everyone, signed in or not.)
+  if (hasToken && PUBLIC_PATHS.includes(pathname) && !searchParams.has("token")) {
     const url = request.nextUrl.clone();
     url.pathname = "/boards";
     url.search = "";

@@ -35,6 +35,11 @@ class Board(Base):
     name = Column(String(255), nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Client status page: a random token makes /status/<token> public (owner
+    # can revoke by clearing it). Narrative is cached JSON, refreshed lazily.
+    status_token = Column(String(40), nullable=True, unique=True, index=True)
+    status_narrative = Column(Text, nullable=True)
+    status_generated_at = Column(DateTime, nullable=True)
 
     owner = relationship("User")
     memberships = relationship(

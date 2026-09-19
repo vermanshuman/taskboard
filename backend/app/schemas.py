@@ -123,7 +123,35 @@ class BoardOut(BaseModel):
 class BoardDetail(BoardOut):
     lists: list[ListOut] = []
     members: list[MemberOut] = []
+    status_token: str | None = None  # set when the public status page is enabled
     activity_logs: list[ActivityLogOut] = []  # most recent ACTIVITY_PREVIEW only; page via /activity
+
+
+class StatusLink(BaseModel):
+    token: str
+    generated_at: datetime | None
+
+
+class StatusNarrative(BaseModel):
+    summary: str
+    shipped: list[str] = []
+    in_progress: list[str] = []
+    next: list[str] = []
+    risks: list[str] = []
+
+
+class StatusActivity(BaseModel):
+    when: datetime
+    who: str  # display name only, never an email
+    text: str
+
+
+class StatusPage(BaseModel):
+    board_name: str
+    generated_at: datetime | None
+    narrative: StatusNarrative
+    stats: dict
+    recent: list[StatusActivity] = []
 
 
 class ActivityPage(BaseModel):

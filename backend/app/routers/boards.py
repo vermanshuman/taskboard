@@ -1,9 +1,12 @@
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..database import get_db
 from ..deps import get_current_user, require_board_access
+from ..status_report import ensure_narrative
 from ..websockets import notify
 
 router = APIRouter(prefix="/api/boards", tags=["boards"])
@@ -40,6 +43,7 @@ def _board_detail(board: models.Board, role: str, db: Session) -> schemas.BoardD
         lists=[schemas.ListOut.model_validate(l) for l in board.lists],
         members=[_member_out(m) for m in board.memberships],
         activity_logs=[schemas.ActivityLogOut.model_validate(l) for l in recent],
+        status_token=board.status_token,
     )
 
 
@@ -124,6 +128,56 @@ def delete_board(
     board = require_board_access(board_id, db, user, owner_only=True)
     db.delete(board)
     db.commit()
+
+
+# ---- client status page (owner controls) ----
+
+
+@router.post("/{board_id}/status-link", response_model=schemas.StatusLink)
+def enable_status_link(
+    board_id: int,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """Create (or return the existing) public status link and generate the
+    first narrative so the page is ready the moment the client opens it."""
+    board = require_board_access(board_id, db, user, owner_only=True)
+    if not board.status_token:
+        board.status_token = secrets.token_urlsafe(24)
+        db.add(models.ActivityLog(board_id=board.id, user_email=user.email,
+                                  action_text="enabled the client status page"))
+        db.commit()
+    ensure_narrative(board, db, force=board.status_generated_at is None)
+    return schemas.StatusLink(token=board.status_token, generated_at=board.status_generated_at)
+
+
+@router.post("/{board_id}/status-link/refresh", response_model=schemas.StatusLink)
+def refresh_status_link(
+    board_id: int,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    board = require_board_access(board_id, db, user, owner_only=True)
+    if not board.status_token:
+        raise HTTPException(status_code=404, detail="Status page is not enabled")
+    ensure_narrative(board, db, force=True)
+    return schemas.StatusLink(token=board.status_token, generated_at=board.status_generated_at)
+
+
+@router.delete("/{board_id}/status-link", status_code=204)
+def revoke_status_link(
+    board_id: int,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    board = require_board_access(board_id, db, user, owner_only=True)
+    if board.status_token:
+        board.status_token = None
+        board.status_narrative = None
+        board.status_generated_at = None
+        db.add(models.ActivityLog(board_id=board.id, user_email=user.email,
+                                  action_text="disabled the client status page"))
+        db.commit()
 
 
 # ---- members (sharing) ----

@@ -59,7 +59,7 @@ Ranked by impact per day of work. Top picks for a freelance demo: D1, D7, D2.
 | E4 | Ask a card "why are you stuck?" | Per-card agent thread with that card's history + related cards via embeddings. | todo |
 | E5 | Natural-language filter | "overdue bugs nobody touched in 2 weeks" → live board filter. | todo |
 | E6 | Risk radar | Predictive ⚠ on cards likely to slip (vague title, no owner, near due, idle, similar cards slipped before). | todo |
-| E7 | Client status page | Public read-only `/status/<token>` with an agent-written narrative (shipped / next / risks). | todo |
+| E7 | **Client status page** ✅ | Owner creates a link from the Share dialog → public `/status/<token>` (no sign-in, `noindex`): progress bar, agent-written summary / shipped this week / in progress / next / risks, per-column counts, recent activity. Titles only — no descriptions, attachments or emails (activity text is scrubbed). Narrative cached on the board (`status_narrative`), regenerated lazily when the board changed, throttled to 10 min; owner can regenerate or turn off. Data-only fallback without an OpenAI key. `app/status_report.py`. | done 2026-09-19 |
 | E8 | Weekly retro | Agent-written retro from the activity log. | todo |
 | E9 | Handoff notes | On column change, agent drafts a handoff note from the card's history. | todo |
 | E10 | Meeting mode | Continuous voice during a call → proposed cards/moves to tick afterwards. | todo |
